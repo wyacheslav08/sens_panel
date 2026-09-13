@@ -1,0 +1,259 @@
+html
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Настройка Скрытого Замка</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --surface-color: #1e1e1e;
+            --primary-color: #bb86fc;
+            --text-color: #e0e0e0;
+            --danger-color: #cf6679;
+            --success-color: #03dac6;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 400px;
+            background-color: var(--surface-color);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+        }
+
+        h1, h2 {
+            text-align: center;
+            margin-top: 0;
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        button:active { opacity: 0.8; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .btn-connect { background-color: var(--primary-color); color: #000; }
+        .btn-disconnect { background-color: var(--danger-color); color: #000; display: none; }
+        .btn-unlock { background-color: var(--success-color); color: #000; }
+        .btn-save { background-color: #3700b3; color: #fff; }
+
+        .status {
+            text-align: center;
+            margin: 10px 0;
+            font-size: 14px;
+            color: #aaa;
+        }
+
+        .panel { display: none; } /* Скрыто до подключения */
+
+        .gesture-input {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+
+        .gesture-btn {
+            flex: 1 1 45%;
+            padding: 15px 0;
+            background-color: #333;
+            color: #fff;
+            border: 1px solid #555;
+        }
+
+        .sequence-display {
+            background: #000;
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+            letter-spacing: 2px;
+            min-height: 24px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Скрытый Замок</h1>
+        <div class="status" id="statusText">Статус: Отключено</div>
+        
+        <button class="btn-connect" id="btnConnect">Подключиться по Bluetooth</button>
+        <button class="btn-disconnect" id="btnDisconnect">Отключиться</button>
+    </div>
+
+    <div class="container panel" id="controlPanel">
+        <h2>Управление</h2>
+        <button class="btn-unlock" id="btnUnlock">🔓 Открыть дверь</button>
+    </div>
+
+    <div class="container panel" id="settingsPanel">
+        <h2>Смена пароля (жестов)</h2>
+        <p style="font-size: 12px; color: #aaa; text-align: center;">Введите новую комбинацию (макс. 10)</p>
+        
+        <div class="sequence-display" id="sequenceDisplay"></div>
+        
+        <div class="gesture-input">
+            <button class="gesture-btn" onclick="addGesture(1, 'ВВЕРХ')">⬆️ ВВЕРХ</button>
+            <button class="gesture-btn" onclick="addGesture(2, 'ВНИЗ')">⬇️ ВНИЗ</button>
+            <button class="gesture-btn" onclick="addGesture(3, 'ВЛЕВО')">⬅️ ВЛЕВО</button>
+            <button class="gesture-btn" onclick="addGesture(4, 'ВПРАВО')">➡️ ВПРАВО</button>
+            <button class="gesture-btn" onclick="addGesture(5, 'ТАП')" style="flex-basis: 100%;">🟢 ТАП</button>
+        </div>
+        
+        <button class="gesture-btn" onclick="clearGestures()" style="background-color: var(--danger-color); color: #000;">Очистить ввод</button>
+        <button class="btn-save" id="btnSavePass">💾 Сохранить новый пароль</button>
+    </div>
+
+    <script>
+        // UUIDs из нашего C-кода (Этап 3)
+        const SERVICE_UUID = '5c9a0001-5259-4b6e-8217-10f848c4ab7e';
+        const UNLOCK_CHR_UUID = '5c9a0002-5259-4b6e-8217-10f848c4ab7e';
+        const PASS_CHR_UUID = '5c9a0003-5259-4b6e-8217-10f848c4ab7e';
+
+        let bleDevice = null;
+        let gattServer = null;
+        let unlockCharacteristic = null;
+        let passCharacteristic = null;
+
+        let newPasswordSequence = [];
+        let newPasswordText = [];
+
+        const statusText = document.getElementById('statusText');
+        const btnConnect = document.getElementById('btnConnect');
+        const btnDisconnect = document.getElementById('btnDisconnect');
+        const controlPanel = document.getElementById('controlPanel');
+        const settingsPanel = document.getElementById('settingsPanel');
+        const sequenceDisplay = document.getElementById('sequenceDisplay');
+
+        // Подключение
+        btnConnect.addEventListener('click', async () => {
+            try {
+                if (!navigator.bluetooth) {
+                    alert('Ваш браузер не поддерживает Web Bluetooth! Используйте Chrome для Android, ПК или Bluefy для iOS.');
+                    return;
+                }
+
+                statusText.innerText = 'Поиск устройства...';
+                
+                bleDevice = await navigator.bluetooth.requestDevice({
+                    filters: [{ namePrefix: 'HiddenLock' }],
+                    optionalServices: [SERVICE_UUID]
+                });
+
+                bleDevice.addEventListener('gattserverdisconnected', onDisconnected);
+
+                statusText.innerText = 'Подключение к GATT...';
+                gattServer = await bleDevice.gatt.connect();
+
+                statusText.innerText = 'Получение сервисов... (Возможно потребуется PIN: 123456)';
+                const service = await gattServer.getPrimaryService(SERVICE_UUID);
+
+                unlockCharacteristic = await service.getCharacteristic(UNLOCK_CHR_UUID);
+                passCharacteristic = await service.getCharacteristic(PASS_CHR_UUID);
+
+                statusText.innerText = 'Статус: ПОДКЛЮЧЕНО';
+                statusText.style.color = 'var(--success-color)';
+                
+                btnConnect.style.display = 'none';
+                btnDisconnect.style.display = 'block';
+                controlPanel.style.display = 'block';
+                settingsPanel.style.display = 'block';
+
+            } catch (error) {
+                console.error(error);
+                statusText.innerText = 'Ошибка: ' + error.message;
+            }
+        });
+
+        // Отключение
+        btnDisconnect.addEventListener('click', () => {
+            if (bleDevice && bleDevice.gatt.connected) {
+                bleDevice.gatt.disconnect();
+            }
+        });
+
+        function onDisconnected() {
+            statusText.innerText = 'Статус: Отключено';
+            statusText.style.color = '#aaa';
+            btnConnect.style.display = 'block';
+            btnDisconnect.style.display = 'none';
+            controlPanel.style.display = 'none';
+            settingsPanel.style.display = 'none';
+        }
+
+        // Открытие замка
+        document.getElementById('btnUnlock').addEventListener('click', async () => {
+            if (!unlockCharacteristic) return;
+            try {
+                const command = new Uint8Array([0x01]);
+                await unlockCharacteristic.writeValue(command);
+                alert('Команда на открытие отправлена!');
+            } catch (error) {
+                console.error(error);
+                alert('Ошибка отправки: ' + error.message);
+            }
+        });
+
+        // Логика набора пароля
+        window.addGesture = function(code, name) {
+            if (newPasswordSequence.length >= 10) {
+                alert('Максимальная длина пароля - 10 жестов');
+                return;
+            }
+            newPasswordSequence.push(code);
+            newPasswordText.push(name);
+            sequenceDisplay.innerText = newPasswordText.join(' - ');
+        };
+
+        window.clearGestures = function() {
+            newPasswordSequence = [];
+            newPasswordText = [];
+            sequenceDisplay.innerText = '';
+        };
+
+        // Сохранение пароля
+        document.getElementById('btnSavePass').addEventListener('click', async () => {
+            if (!passCharacteristic) return;
+            if (newPasswordSequence.length === 0) {
+                alert('Введите хотя бы один жест!');
+                return;
+            }
+            try {
+                const payload = new Uint8Array(newPasswordSequence);
+                await passCharacteristic.writeValue(payload);
+                alert('Новый пароль успешно сохранен в устройстве!');
+                clearGestures();
+            } catch (error) {
+                console.error(error);
+                alert('Ошибка сохранения: ' + error.message);
+            }
+        });
+    </script>
+</body>
+</html>
