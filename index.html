@@ -1,259 +1,1872 @@
-html
+<!-- Путь: web/hidden_lock_web.html -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Настройка Скрытого Замка</title>
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+    <meta
+        name="theme-color"
+        content="#101827"
+    >
+
+    <title>Настройка скрытого замка</title>
+
     <style>
         :root {
-            --bg-color: #121212;
-            --surface-color: #1e1e1e;
-            --primary-color: #bb86fc;
-            --text-color: #e0e0e0;
-            --danger-color: #cf6679;
-            --success-color: #03dac6;
+            color-scheme: dark;
+
+            --background: #0b1120;
+            --surface: #111827;
+            --surface-light: #1f2937;
+            --surface-hover: #263449;
+
+            --primary: #38bdf8;
+            --primary-dark: #0284c7;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+
+            --radius: 14px;
+            --shadow: 0 18px 45px rgba(0, 0, 0, 0.35);
+        }
+
+        * {
+            box-sizing: border-box;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
             margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            min-height: 100vh;
+
+            background:
+                radial-gradient(
+                    circle at top,
+                    #172554 0,
+                    var(--background) 42%
+                );
+
+            color: var(--text);
+            font-family:
+                Inter,
+                system-ui,
+                -apple-system,
+                BlinkMacSystemFont,
+                "Segoe UI",
+                sans-serif;
         }
 
-        .container {
-            width: 100%;
-            max-width: 400px;
-            background-color: var(--surface-color);
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            margin-bottom: 20px;
-        }
-
-        h1, h2 {
-            text-align: center;
-            margin-top: 0;
+        button,
+        input {
+            font: inherit;
         }
 
         button {
-            width: 100%;
-            padding: 15px;
-            margin: 10px 0;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
+            min-height: 46px;
+            padding: 11px 16px;
+
+            border: 1px solid transparent;
+            border-radius: 11px;
+
+            background: var(--primary-dark);
+            color: white;
+
             cursor: pointer;
-            transition: opacity 0.2s;
+
+            transition:
+                transform 0.12s ease,
+                opacity 0.12s ease,
+                background 0.12s ease;
         }
 
-        button:active { opacity: 0.8; }
-        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        button:hover:not(:disabled) {
+            background: var(--primary);
+            transform: translateY(-1px);
+        }
 
-        .btn-connect { background-color: var(--primary-color); color: #000; }
-        .btn-disconnect { background-color: var(--danger-color); color: #000; display: none; }
-        .btn-unlock { background-color: var(--success-color); color: #000; }
-        .btn-save { background-color: #3700b3; color: #fff; }
+        button:disabled {
+            cursor: not-allowed;
+            opacity: 0.42;
+        }
 
-        .status {
+        button.secondary {
+            background: var(--surface-light);
+            border-color: var(--border);
+        }
+
+        button.secondary:hover:not(:disabled) {
+            background: var(--surface-hover);
+        }
+
+        button.success {
+            background: #15803d;
+        }
+
+        button.danger {
+            background: #b91c1c;
+        }
+
+        button.warning {
+            background: #b45309;
+        }
+
+        input {
+            width: 100%;
+            min-height: 46px;
+            padding: 10px 12px;
+
+            border: 1px solid var(--border);
+            border-radius: 10px;
+
+            outline: none;
+            background: #0f172a;
+            color: var(--text);
+        }
+
+        input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
+        }
+
+        .page {
+            width: min(980px, 100%);
+            margin: 0 auto;
+            padding: 24px 16px 50px;
+        }
+
+        .header {
+            margin-bottom: 20px;
             text-align: center;
-            margin: 10px 0;
-            font-size: 14px;
-            color: #aaa;
         }
 
-        .panel { display: none; } /* Скрыто до подключения */
+        .header h1 {
+            margin: 0 0 8px;
+            font-size: clamp(28px, 7vw, 44px);
+        }
 
-        .gesture-input {
+        .header p {
+            margin: 0;
+            color: var(--text-muted);
+        }
+
+        .card {
+            margin-top: 16px;
+            padding: 18px;
+
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+
+            background: rgba(17, 24, 39, 0.94);
+            box-shadow: var(--shadow);
+        }
+
+        .card h2 {
+            margin: 0 0 14px;
+            font-size: 21px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns:
+                repeat(auto-fit, minmax(210px, 1fr));
+            gap: 12px;
+        }
+
+        .button-row {
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
-            justify-content: center;
-            margin-bottom: 15px;
         }
 
-        .gesture-btn {
-            flex: 1 1 45%;
-            padding: 15px 0;
-            background-color: #333;
-            color: #fff;
-            border: 1px solid #555;
+        .button-row > button {
+            flex: 1 1 180px;
         }
 
-        .sequence-display {
-            background: #000;
+        .status-line {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+
+            min-height: 42px;
+            padding: 10px 12px;
+
+            border: 1px solid var(--border);
+            border-radius: 10px;
+
+            background: #0f172a;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+
+            flex: 0 0 auto;
+
+            border-radius: 50%;
+            background: var(--danger);
+            box-shadow: 0 0 10px currentColor;
+        }
+
+        .status-dot.connecting {
+            background: var(--warning);
+            color: var(--warning);
+            animation: pulse 1.1s infinite;
+        }
+
+        .status-dot.ready {
+            background: var(--success);
+            color: var(--success);
+        }
+
+        .muted {
+            color: var(--text-muted);
+        }
+
+        .security-details {
+            display: grid;
+            grid-template-columns:
+                repeat(auto-fit, minmax(145px, 1fr));
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .security-item {
             padding: 10px;
-            border-radius: 6px;
-            text-align: center;
-            letter-spacing: 2px;
-            min-height: 24px;
-            margin-bottom: 15px;
+
+            border: 1px solid var(--border);
+            border-radius: 10px;
+
+            background: #0f172a;
+        }
+
+        .security-item strong {
+            display: block;
+            margin-top: 4px;
+        }
+
+        .gesture-builder {
+            display: grid;
+            grid-template-columns:
+                repeat(auto-fit, minmax(135px, 1fr));
+            gap: 9px;
+        }
+
+        .gesture-sequence {
+            min-height: 60px;
+            margin: 14px 0;
+            padding: 12px;
+
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+
+            border: 1px dashed var(--border);
+            border-radius: 11px;
+
+            background: #0f172a;
+        }
+
+        .gesture-chip {
+            padding: 7px 10px;
+            border-radius: 999px;
+
+            background: #1d4ed8;
+            color: white;
+            font-size: 14px;
+        }
+
+        .gesture-chip.pause {
+            background: #92400e;
+        }
+
+        .field {
+            margin-top: 12px;
+        }
+
+        .field label {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--text-muted);
+        }
+
+        .notice {
+            margin-top: 12px;
+            padding: 11px 13px;
+
+            border-left: 4px solid var(--primary);
+            border-radius: 8px;
+
+            background: rgba(14, 116, 144, 0.16);
+            color: #bae6fd;
+        }
+
+        .notice.warning {
+            border-left-color: var(--warning);
+            background: rgba(180, 83, 9, 0.16);
+            color: #fde68a;
+        }
+
+        .notice.danger {
+            border-left-color: var(--danger);
+            background: rgba(185, 28, 28, 0.16);
+            color: #fecaca;
+        }
+
+        .toast {
+            position: fixed;
+            left: 50%;
+            bottom: 22px;
+            z-index: 2000;
+
+            width: min(92vw, 560px);
+            padding: 13px 16px;
+
+            border: 1px solid var(--border);
+            border-radius: 11px;
+
+            background: #111827;
+            box-shadow: var(--shadow);
+
+            transform: translateX(-50%);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 1500;
+
+            display: grid;
+            place-items: center;
+
+            padding: 18px;
+            background: rgba(2, 6, 23, 0.82);
+            backdrop-filter: blur(7px);
+        }
+
+        .modal {
+            width: min(520px, 100%);
+            padding: 22px;
+
+            border: 1px solid var(--border);
+            border-radius: 16px;
+
+            background: var(--surface);
+            box-shadow: var(--shadow);
+        }
+
+        .modal h2 {
+            margin: 0 0 10px;
+        }
+
+        .progress {
+            height: 8px;
+            margin-top: 16px;
+
+            overflow: hidden;
+
+            border-radius: 999px;
+            background: #0f172a;
+        }
+
+        .progress::after {
+            display: block;
+            width: 38%;
+            height: 100%;
+
+            content: "";
+            border-radius: inherit;
+            background: var(--primary);
+
+            animation: progress 1.2s infinite ease-in-out;
+        }
+
+        @keyframes pulse {
+            0%,
+            100% {
+                opacity: 0.42;
+            }
+
+            50% {
+                opacity: 1;
+            }
+        }
+
+        @keyframes progress {
+            0% {
+                transform: translateX(-110%);
+            }
+
+            100% {
+                transform: translateX(310%);
+            }
+        }
+
+        @media (max-width: 560px) {
+            .page {
+                padding: 16px 11px 38px;
+            }
+
+            .card {
+                padding: 15px;
+            }
         }
     </style>
 </head>
+
 <body>
+    <main class="page">
+        <header class="header">
+            <h1>🔐 Скрытый замок</h1>
+            <p>
+                ESP32-WROOM-32 · защищённое управление по Bluetooth LE
+            </p>
+        </header>
 
-    <div class="container">
-        <h1>Скрытый Замок</h1>
-        <div class="status" id="statusText">Статус: Отключено</div>
-        
-        <button class="btn-connect" id="btnConnect">Подключиться по Bluetooth</button>
-        <button class="btn-disconnect" id="btnDisconnect">Отключиться</button>
-    </div>
+        <section class="card">
+            <h2>Подключение</h2>
 
-    <div class="container panel" id="controlPanel">
-        <h2>Управление</h2>
-        <button class="btn-unlock" id="btnUnlock">🔓 Открыть дверь</button>
-    </div>
+            <div class="status-line">
+                <span
+                    id="statusDot"
+                    class="status-dot"
+                ></span>
 
-    <div class="container panel" id="settingsPanel">
-        <h2>Смена пароля (жестов)</h2>
-        <p style="font-size: 12px; color: #aaa; text-align: center;">Введите новую комбинацию (макс. 10)</p>
-        
-        <div class="sequence-display" id="sequenceDisplay"></div>
-        
-        <div class="gesture-input">
-            <button class="gesture-btn" onclick="addGesture(1, 'ВВЕРХ')">⬆️ ВВЕРХ</button>
-            <button class="gesture-btn" onclick="addGesture(2, 'ВНИЗ')">⬇️ ВНИЗ</button>
-            <button class="gesture-btn" onclick="addGesture(3, 'ВЛЕВО')">⬅️ ВЛЕВО</button>
-            <button class="gesture-btn" onclick="addGesture(4, 'ВПРАВО')">➡️ ВПРАВО</button>
-            <button class="gesture-btn" onclick="addGesture(5, 'ТАП')" style="flex-basis: 100%;">🟢 ТАП</button>
+                <div>
+                    <strong id="statusText">
+                        Отключено
+                    </strong>
+
+                    <div
+                        id="statusSubtext"
+                        class="muted"
+                    >
+                        Выберите устройство для подключения
+                    </div>
+                </div>
+            </div>
+
+            <div class="security-details">
+                <div class="security-item">
+                    <span class="muted">Шифрование</span>
+                    <strong id="encryptedValue">Нет</strong>
+                </div>
+
+                <div class="security-item">
+                    <span class="muted">Аутентификация</span>
+                    <strong id="authenticatedValue">Нет</strong>
+                </div>
+
+                <div class="security-item">
+                    <span class="muted">Bonding</span>
+                    <strong id="bondedValue">Нет</strong>
+                </div>
+
+                <div class="security-item">
+                    <span class="muted">Доверенных устройств</span>
+                    <strong id="bondCountValue">0</strong>
+                </div>
+            </div>
+
+            <div
+                class="button-row"
+                style="margin-top: 14px"
+            >
+                <button id="connectButton">
+                    Подключиться по Bluetooth
+                </button>
+
+                <button
+                    id="disconnectButton"
+                    class="secondary"
+                    disabled
+                >
+                    Отключиться
+                </button>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>Управление замком</h2>
+
+            <button
+                id="unlockButton"
+                class="success"
+                data-requires-ready
+                disabled
+                style="width: 100%"
+            >
+                🔓 Открыть дверь
+            </button>
+        </section>
+
+        <section class="card">
+            <h2>Жестовый пароль</h2>
+
+            <p class="muted">
+                До 32 элементов. Пауза формируется по времени и
+                не может быть первым элементом.
+            </p>
+
+            <div class="gesture-builder">
+                <button
+                    class="secondary gesture-button"
+                    data-gesture="1"
+                >
+                    ⬆️ Вверх
+                </button>
+
+                <button
+                    class="secondary gesture-button"
+                    data-gesture="2"
+                >
+                    ⬇️ Вниз
+                </button>
+
+                <button
+                    class="secondary gesture-button"
+                    data-gesture="3"
+                >
+                    ⬅️ Влево
+                </button>
+
+                <button
+                    class="secondary gesture-button"
+                    data-gesture="4"
+                >
+                    ➡️ Вправо
+                </button>
+
+                <button
+                    class="secondary gesture-button"
+                    data-gesture="5"
+                >
+                    🟢 Тап
+                </button>
+
+                <button
+                    class="warning gesture-button"
+                    data-gesture="6"
+                >
+                    ⏸ Пауза
+                </button>
+            </div>
+
+            <div
+                id="gestureSequence"
+                class="gesture-sequence"
+            >
+                <span class="muted">
+                    Комбинация пока пуста
+                </span>
+            </div>
+
+            <div class="button-row">
+                <button
+                    id="removeGestureButton"
+                    class="secondary"
+                >
+                    Удалить последний
+                </button>
+
+                <button
+                    id="clearGestureButton"
+                    class="secondary"
+                >
+                    Очистить
+                </button>
+
+                <button
+                    id="saveGestureButton"
+                    data-requires-ready
+                    disabled
+                >
+                    Сохранить пароль
+                </button>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>Настройки Bluetooth</h2>
+
+            <div class="grid">
+                <div>
+                    <div class="field">
+                        <label for="deviceNameInput">
+                            Имя устройства
+                        </label>
+
+                        <input
+                            id="deviceNameInput"
+                            type="text"
+                            maxlength="24"
+                            placeholder="HiddenLock-ESP32"
+                        >
+                    </div>
+
+                    <button
+                        id="saveNameButton"
+                        data-requires-ready
+                        disabled
+                        style="width: 100%; margin-top: 10px"
+                    >
+                        Сохранить имя
+                    </button>
+                </div>
+
+                <div>
+                    <div class="field">
+                        <label for="passkeyInput">
+                            Новый BLE PIN
+                        </label>
+
+                        <input
+                            id="passkeyInput"
+                            type="password"
+                            inputmode="numeric"
+                            pattern="[0-9]{6}"
+                            maxlength="6"
+                            placeholder="6 цифр"
+                            autocomplete="new-password"
+                        >
+                    </div>
+
+                    <button
+                        id="savePasskeyButton"
+                        data-requires-ready
+                        disabled
+                        style="width: 100%; margin-top: 10px"
+                    >
+                        Изменить BLE PIN
+                    </button>
+                </div>
+            </div>
+
+            <div class="notice warning">
+                После изменения PIN все сохранённые связи удаляются.
+                Устройство перезапустится, и смартфон потребуется
+                сопрячь повторно.
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>Обслуживание</h2>
+
+            <div class="button-row">
+                <button
+                    id="rebaseButton"
+                    class="secondary"
+                    data-requires-ready
+                    disabled
+                >
+                    Перекалибровать сенсоры
+                </button>
+
+                <button
+                    id="clearDiagnosticsButton"
+                    class="secondary"
+                    data-requires-ready
+                    disabled
+                >
+                    Очистить диагностику
+                </button>
+
+                <button
+                    id="deleteBondsButton"
+                    class="warning"
+                    data-requires-ready
+                    disabled
+                >
+                    Удалить доверенные устройства
+                </button>
+
+                <button
+                    id="rebootButton"
+                    class="warning"
+                    data-requires-ready
+                    disabled
+                >
+                    Перезагрузить ESP32
+                </button>
+
+                <button
+                    id="factoryResetButton"
+                    class="danger"
+                    data-requires-ready
+                    disabled
+                >
+                    Заводской сброс
+                </button>
+            </div>
+
+            <div class="notice danger">
+                Заводской сброс удаляет жестовый пароль, BLE PIN,
+                имя устройства и все сохранённые связи.
+            </div>
+        </section>
+    </main>
+
+    <div
+        id="connectionModal"
+        class="modal-overlay hidden"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="connectionModalTitle"
+    >
+        <div class="modal">
+            <h2 id="connectionModalTitle">
+                Идёт подключение. Не закрывайте окно
+            </h2>
+
+            <p id="connectionModalText">
+                Выбор устройства Bluetooth…
+            </p>
+
+            <p class="muted">
+                При первом подключении система может запросить PIN-код.
+                Дождитесь завершения сопряжения.
+            </p>
+
+            <div class="progress"></div>
         </div>
-        
-        <button class="gesture-btn" onclick="clearGestures()" style="background-color: var(--danger-color); color: #000;">Очистить ввод</button>
-        <button class="btn-save" id="btnSavePass">💾 Сохранить новый пароль</button>
     </div>
+
+    <div
+        id="toast"
+        class="toast hidden"
+        role="status"
+    ></div>
 
     <script>
-        // UUIDs из нашего C-кода (Этап 3)
-        const SERVICE_UUID = '5c9a0001-5259-4b6e-8217-10f848c4ab7e';
-        const UNLOCK_CHR_UUID = '5c9a0002-5259-4b6e-8217-10f848c4ab7e';
-        const PASS_CHR_UUID = '5c9a0003-5259-4b6e-8217-10f848c4ab7e';
+        "use strict";
 
-        let bleDevice = null;
-        let gattServer = null;
-        let unlockCharacteristic = null;
-        let passCharacteristic = null;
+        const UUID = Object.freeze({
+            service:
+                "5c9a0001-5259-4b6e-8217-10f848c4ab7e",
+            unlock:
+                "5c9a0002-5259-4b6e-8217-10f848c4ab7e",
+            gesturePassword:
+                "5c9a0003-5259-4b6e-8217-10f848c4ab7e",
+            status:
+                "5c9a0004-5259-4b6e-8217-10f848c4ab7e",
+            admin:
+                "5c9a0005-5259-4b6e-8217-10f848c4ab7e",
+            deviceName:
+                "5c9a0006-5259-4b6e-8217-10f848c4ab7e",
+            passkey:
+                "5c9a0007-5259-4b6e-8217-10f848c4ab7e"
+        });
 
-        let newPasswordSequence = [];
-        let newPasswordText = [];
+        const ConnectionState = Object.freeze({
+            DISCONNECTED: "DISCONNECTED",
+            SCANNING: "SCANNING",
+            DEVICE_SELECTED: "DEVICE_SELECTED",
+            CONNECTING: "CONNECTING",
+            DISCOVERING: "DISCOVERING",
+            AUTHENTICATING: "AUTHENTICATING",
+            READY: "READY",
+            RECONNECTING: "RECONNECTING",
+            ERROR: "ERROR"
+        });
 
-        const statusText = document.getElementById('statusText');
-        const btnConnect = document.getElementById('btnConnect');
-        const btnDisconnect = document.getElementById('btnDisconnect');
-        const controlPanel = document.getElementById('controlPanel');
-        const settingsPanel = document.getElementById('settingsPanel');
-        const sequenceDisplay = document.getElementById('sequenceDisplay');
+        const AdminCommand = Object.freeze({
+            REBOOT: 0x01,
+            SENSOR_REBASE: 0x02,
+            CLEAR_DIAGNOSTICS: 0x03,
+            FACTORY_RESET_REQUEST: 0x04,
+            FACTORY_RESET_CONFIRM: 0x05,
+            DELETE_ALL_BONDS: 0x06
+        });
 
-        // Подключение
-        btnConnect.addEventListener('click', async () => {
-            try {
-                if (!navigator.bluetooth) {
-                    alert('Ваш браузер не поддерживает Web Bluetooth! Используйте Chrome для Android, ПК или Bluefy для iOS.');
+        const Gesture = Object.freeze({
+            1: "⬆️ Вверх",
+            2: "⬇️ Вниз",
+            3: "⬅️ Влево",
+            4: "➡️ Вправо",
+            5: "🟢 Тап",
+            6: "⏸ Пауза"
+        });
+
+        const ServerState = Object.freeze({
+            STOPPED: 0,
+            INITIALIZING: 1,
+            ADVERTISING: 2,
+            CONNECTED: 3,
+            AUTHENTICATING: 4,
+            READY: 5,
+            RECONFIGURING: 6,
+            ERROR: 7
+        });
+
+        const STATUS_SIZE = 24;
+        const MAX_GESTURES = 32;
+        const MAX_RECONNECT_ATTEMPTS = 5;
+
+        const state = {
+            connection: ConnectionState.DISCONNECTED,
+
+            device: null,
+            server: null,
+            service: null,
+
+            characteristics: {
+                unlock: null,
+                gesturePassword: null,
+                status: null,
+                admin: null,
+                deviceName: null,
+                passkey: null
+            },
+
+            gestures: [],
+            factoryResetToken: null,
+
+            reconnectAttempt: 0,
+            reconnectCancelled: false,
+            manualDisconnect: false
+        };
+
+        const elements = {
+            statusDot:
+                document.getElementById("statusDot"),
+            statusText:
+                document.getElementById("statusText"),
+            statusSubtext:
+                document.getElementById("statusSubtext"),
+
+            encryptedValue:
+                document.getElementById("encryptedValue"),
+            authenticatedValue:
+                document.getElementById("authenticatedValue"),
+            bondedValue:
+                document.getElementById("bondedValue"),
+            bondCountValue:
+                document.getElementById("bondCountValue"),
+
+            connectButton:
+                document.getElementById("connectButton"),
+            disconnectButton:
+                document.getElementById("disconnectButton"),
+            unlockButton:
+                document.getElementById("unlockButton"),
+
+            gestureSequence:
+                document.getElementById("gestureSequence"),
+            removeGestureButton:
+                document.getElementById("removeGestureButton"),
+            clearGestureButton:
+                document.getElementById("clearGestureButton"),
+            saveGestureButton:
+                document.getElementById("saveGestureButton"),
+
+            deviceNameInput:
+                document.getElementById("deviceNameInput"),
+            saveNameButton:
+                document.getElementById("saveNameButton"),
+
+            passkeyInput:
+                document.getElementById("passkeyInput"),
+            savePasskeyButton:
+                document.getElementById("savePasskeyButton"),
+
+            rebaseButton:
+                document.getElementById("rebaseButton"),
+            clearDiagnosticsButton:
+                document.getElementById(
+                    "clearDiagnosticsButton"
+                ),
+            deleteBondsButton:
+                document.getElementById("deleteBondsButton"),
+            rebootButton:
+                document.getElementById("rebootButton"),
+            factoryResetButton:
+                document.getElementById(
+                    "factoryResetButton"
+                ),
+
+            connectionModal:
+                document.getElementById("connectionModal"),
+            connectionModalText:
+                document.getElementById("connectionModalText"),
+
+            toast:
+                document.getElementById("toast")
+        };
+
+        let toastTimer = null;
+
+        function showToast(message, timeout = 3500) {
+            elements.toast.textContent = message;
+            elements.toast.classList.remove("hidden");
+
+            if (toastTimer !== null) {
+                clearTimeout(toastTimer);
+            }
+
+            toastTimer = setTimeout(() => {
+                elements.toast.classList.add("hidden");
+                toastTimer = null;
+            }, timeout);
+        }
+
+        function showConnectionModal(message) {
+            elements.connectionModalText.textContent = message;
+            elements.connectionModal.classList.remove("hidden");
+        }
+
+        function hideConnectionModal() {
+            elements.connectionModal.classList.add("hidden");
+        }
+
+        function setReadyControls(enabled) {
+            document
+                .querySelectorAll("[data-requires-ready]")
+                .forEach((control) => {
+                    control.disabled = !enabled;
+                });
+
+            elements.disconnectButton.disabled =
+                state.connection ===
+                ConnectionState.DISCONNECTED;
+        }
+
+        function setConnectionState(nextState, details = "") {
+            state.connection = nextState;
+
+            elements.statusDot.className = "status-dot";
+
+            switch (nextState) {
+                case ConnectionState.READY:
+                    elements.statusDot.classList.add("ready");
+                    elements.statusText.textContent =
+                        "Подключено и защищено";
+                    elements.statusSubtext.textContent =
+                        details || "Устройство готово к командам";
+                    setReadyControls(true);
+                    hideConnectionModal();
+                    break;
+
+                case ConnectionState.SCANNING:
+                    elements.statusDot.classList.add("connecting");
+                    elements.statusText.textContent =
+                        "Поиск устройства";
+                    elements.statusSubtext.textContent =
+                        details || "Открыт список Bluetooth";
+                    setReadyControls(false);
+                    showConnectionModal(
+                        "Выберите устройство Bluetooth…"
+                    );
+                    break;
+
+                case ConnectionState.CONNECTING:
+                    elements.statusDot.classList.add("connecting");
+                    elements.statusText.textContent =
+                        "Подключение";
+                    elements.statusSubtext.textContent =
+                        details || "Устанавливается GATT-соединение";
+                    setReadyControls(false);
+                    showConnectionModal(
+                        "Подключение к ESP32…"
+                    );
+                    break;
+
+                case ConnectionState.DISCOVERING:
+                    elements.statusDot.classList.add("connecting");
+                    elements.statusText.textContent =
+                        "Поиск сервисов";
+                    elements.statusSubtext.textContent =
+                        details || "Загрузка GATT-характеристик";
+                    setReadyControls(false);
+                    showConnectionModal(
+                        "Поиск сервиса и характеристик…"
+                    );
+                    break;
+
+                case ConnectionState.AUTHENTICATING:
+                    elements.statusDot.classList.add("connecting");
+                    elements.statusText.textContent =
+                        "Проверка защищённого соединения";
+                    elements.statusSubtext.textContent =
+                        details || "Ожидание pairing и bonding";
+                    setReadyControls(false);
+                    showConnectionModal(
+                        "Ожидание ввода PIN и завершения сопряжения…"
+                    );
+                    break;
+
+                case ConnectionState.RECONNECTING:
+                    elements.statusDot.classList.add("connecting");
+                    elements.statusText.textContent =
+                        "Переподключение";
+                    elements.statusSubtext.textContent =
+                        details;
+                    setReadyControls(false);
+                    showConnectionModal(
+                        "Восстановление Bluetooth-соединения…"
+                    );
+                    break;
+
+                case ConnectionState.ERROR:
+                    elements.statusText.textContent =
+                        "Ошибка подключения";
+                    elements.statusSubtext.textContent =
+                        details || "Повторите подключение";
+                    setReadyControls(false);
+                    hideConnectionModal();
+                    break;
+
+                case ConnectionState.DEVICE_SELECTED:
+                case ConnectionState.DISCONNECTED:
+                default:
+                    elements.statusText.textContent =
+                        "Отключено";
+                    elements.statusSubtext.textContent =
+                        details ||
+                        "Выберите устройство для подключения";
+                    setReadyControls(false);
+                    hideConnectionModal();
+                    break;
+            }
+
+            elements.connectButton.disabled =
+                nextState !== ConnectionState.DISCONNECTED &&
+                nextState !== ConnectionState.ERROR;
+        }
+
+        function clearCharacteristics() {
+            state.service = null;
+
+            Object.keys(state.characteristics).forEach((key) => {
+                state.characteristics[key] = null;
+            });
+        }
+
+        function parseStatus(dataView) {
+            if (dataView.byteLength < STATUS_SIZE) {
+                throw new Error(
+                    "Устройство вернуло неполный статус"
+                );
+            }
+
+            const version = dataView.getUint8(0);
+
+            if (version !== 1) {
+                throw new Error(
+                    "Неподдерживаемая версия BLE-протокола"
+                );
+            }
+
+            const serverState = dataView.getUint8(1);
+            const flags = dataView.getUint8(2);
+
+            return {
+                serverState,
+                connected: Boolean(flags & 0x01),
+                encrypted: Boolean(flags & 0x02),
+                authenticated: Boolean(flags & 0x04),
+                bonded: Boolean(flags & 0x08),
+                bondCount: dataView.getUint8(3),
+                connectionHandle:
+                    dataView.getUint16(4, true),
+                restartReason: dataView.getUint8(6),
+                securityRetry: dataView.getUint8(7),
+                successfulConnections:
+                    dataView.getUint32(8, true),
+                authenticationFailures:
+                    dataView.getUint32(12, true),
+                rejectedCommands:
+                    dataView.getUint32(16, true)
+            };
+        }
+
+        function updateStatusView(status) {
+            elements.encryptedValue.textContent =
+                status.encrypted ? "Да" : "Нет";
+
+            elements.authenticatedValue.textContent =
+                status.authenticated ? "Да" : "Нет";
+
+            elements.bondedValue.textContent =
+                status.bonded ? "Да" : "Нет";
+
+            elements.bondCountValue.textContent =
+                String(status.bondCount);
+
+            const ready =
+                status.serverState === ServerState.READY &&
+                status.connected &&
+                status.encrypted &&
+                status.authenticated &&
+                status.bonded;
+
+            if (ready) {
+                setConnectionState(
+                    ConnectionState.READY,
+                    "Сопряжение завершено, команды разрешены"
+                );
+            } else {
+                setConnectionState(
+                    ConnectionState.AUTHENTICATING,
+                    "Дождитесь системного окна ввода PIN"
+                );
+            }
+
+            return ready;
+        }
+
+        async function loadCharacteristics() {
+            state.characteristics.unlock =
+                await state.service.getCharacteristic(
+                    UUID.unlock
+                );
+
+            state.characteristics.gesturePassword =
+                await state.service.getCharacteristic(
+                    UUID.gesturePassword
+                );
+
+            state.characteristics.status =
+                await state.service.getCharacteristic(
+                    UUID.status
+                );
+
+            state.characteristics.admin =
+                await state.service.getCharacteristic(
+                    UUID.admin
+                );
+
+            state.characteristics.deviceName =
+                await state.service.getCharacteristic(
+                    UUID.deviceName
+                );
+
+            state.characteristics.passkey =
+                await state.service.getCharacteristic(
+                    UUID.passkey
+                );
+        }
+
+        async function authenticateAndBecomeReady() {
+            setConnectionState(
+                ConnectionState.AUTHENTICATING
+            );
+
+            /*
+             * Защищённое чтение STATUS немедленно запускает
+             * системную процедуру pairing. Кнопка замка до READY
+             * остаётся отключённой.
+             */
+            const statusValue =
+                await state.characteristics.status.readValue();
+
+            const status = parseStatus(statusValue);
+            updateStatusView(status);
+
+            await state.characteristics.status
+                .startNotifications();
+
+            state.characteristics.status.addEventListener(
+                "characteristicvaluechanged",
+                handleStatusNotification
+            );
+
+            await state.characteristics.admin
+                .startNotifications();
+
+            state.characteristics.admin.addEventListener(
+                "characteristicvaluechanged",
+                handleAdminNotification
+            );
+
+            const nameValue =
+                await state.characteristics.deviceName.readValue();
+
+            elements.deviceNameInput.value =
+                new TextDecoder().decode(nameValue);
+
+            if (!updateStatusView(status)) {
+                await waitUntilReady();
+            }
+        }
+
+        async function waitUntilReady() {
+            const deadline = Date.now() + 30000;
+
+            while (Date.now() < deadline) {
+                if (
+                    !state.device ||
+                    !state.device.gatt.connected
+                ) {
+                    throw new Error(
+                        "Соединение потеряно во время аутентификации"
+                    );
+                }
+
+                const value =
+                    await state.characteristics.status.readValue();
+
+                const status = parseStatus(value);
+
+                if (updateStatusView(status)) {
                     return;
                 }
 
-                statusText.innerText = 'Поиск устройства...';
-                
-                bleDevice = await navigator.bluetooth.requestDevice({
-                    filters: [{ namePrefix: 'HiddenLock' }],
-                    optionalServices: [SERVICE_UUID]
-                });
-
-                bleDevice.addEventListener('gattserverdisconnected', onDisconnected);
-
-                statusText.innerText = 'Подключение к GATT...';
-                gattServer = await bleDevice.gatt.connect();
-
-                statusText.innerText = 'Получение сервисов... (Возможно потребуется PIN: 123456)';
-                const service = await gattServer.getPrimaryService(SERVICE_UUID);
-
-                unlockCharacteristic = await service.getCharacteristic(UNLOCK_CHR_UUID);
-                passCharacteristic = await service.getCharacteristic(PASS_CHR_UUID);
-
-                statusText.innerText = 'Статус: ПОДКЛЮЧЕНО';
-                statusText.style.color = 'var(--success-color)';
-                
-                btnConnect.style.display = 'none';
-                btnDisconnect.style.display = 'block';
-                controlPanel.style.display = 'block';
-                settingsPanel.style.display = 'block';
-
-            } catch (error) {
-                console.error(error);
-                statusText.innerText = 'Ошибка: ' + error.message;
+                await delay(500);
             }
-        });
 
-        // Отключение
-        btnDisconnect.addEventListener('click', () => {
-            if (bleDevice && bleDevice.gatt.connected) {
-                bleDevice.gatt.disconnect();
-            }
-        });
-
-        function onDisconnected() {
-            statusText.innerText = 'Статус: Отключено';
-            statusText.style.color = '#aaa';
-            btnConnect.style.display = 'block';
-            btnDisconnect.style.display = 'none';
-            controlPanel.style.display = 'none';
-            settingsPanel.style.display = 'none';
+            throw new Error(
+                "Сопряжение не завершено. Проверьте окно ввода PIN."
+            );
         }
 
-        // Открытие замка
-        document.getElementById('btnUnlock').addEventListener('click', async () => {
-            if (!unlockCharacteristic) return;
+        function handleStatusNotification(event) {
             try {
-                const command = new Uint8Array([0x01]);
-                await unlockCharacteristic.writeValue(command);
-                alert('Команда на открытие отправлена!');
+                const status = parseStatus(
+                    event.target.value
+                );
+
+                updateStatusView(status);
             } catch (error) {
                 console.error(error);
-                alert('Ошибка отправки: ' + error.message);
+            }
+        }
+
+        function handleAdminNotification(event) {
+            const value = event.target.value;
+
+            if (
+                value.byteLength === 5 &&
+                value.getUint8(0) ===
+                    AdminCommand.FACTORY_RESET_REQUEST
+            ) {
+                state.factoryResetToken =
+                    new Uint8Array(
+                        value.buffer.slice(
+                            value.byteOffset + 1,
+                            value.byteOffset + 5
+                        )
+                    );
+            }
+        }
+
+        async function establishGattConnection() {
+            setConnectionState(
+                ConnectionState.CONNECTING
+            );
+
+            state.server =
+                await state.device.gatt.connect();
+
+            setConnectionState(
+                ConnectionState.DISCOVERING
+            );
+
+            state.service =
+                await state.server.getPrimaryService(
+                    UUID.service
+                );
+
+            await loadCharacteristics();
+            await authenticateAndBecomeReady();
+
+            state.reconnectAttempt = 0;
+            state.reconnectCancelled = false;
+        }
+
+        async function connectBluetooth() {
+            if (!navigator.bluetooth) {
+                showToast(
+                    "Этот браузер не поддерживает Web Bluetooth"
+                );
+                return;
+            }
+
+            state.manualDisconnect = false;
+            state.reconnectCancelled = false;
+
+            try {
+                setConnectionState(
+                    ConnectionState.SCANNING
+                );
+
+                state.device =
+                    await navigator.bluetooth.requestDevice({
+                        filters: [
+                            {
+                                services: [UUID.service]
+                            }
+                        ]
+                    });
+
+                state.device.addEventListener(
+                    "gattserverdisconnected",
+                    handleDisconnection
+                );
+
+                setConnectionState(
+                    ConnectionState.DEVICE_SELECTED,
+                    state.device.name || "Устройство выбрано"
+                );
+
+                await establishGattConnection();
+            } catch (error) {
+                console.error(error);
+
+                clearCharacteristics();
+
+                setConnectionState(
+                    ConnectionState.ERROR,
+                    friendlyBluetoothError(error)
+                );
+
+                showToast(
+                    friendlyBluetoothError(error),
+                    6000
+                );
+            }
+        }
+
+        async function disconnectBluetooth() {
+            state.manualDisconnect = true;
+            state.reconnectCancelled = true;
+
+            if (
+                state.device &&
+                state.device.gatt.connected
+            ) {
+                state.device.gatt.disconnect();
+            }
+
+            clearCharacteristics();
+
+            setConnectionState(
+                ConnectionState.DISCONNECTED
+            );
+        }
+
+        async function handleDisconnection() {
+            clearCharacteristics();
+            setReadyControls(false);
+
+            if (
+                state.manualDisconnect ||
+                state.reconnectCancelled
+            ) {
+                setConnectionState(
+                    ConnectionState.DISCONNECTED
+                );
+                return;
+            }
+
+            for (
+                let attempt = 0;
+                attempt < MAX_RECONNECT_ATTEMPTS;
+                attempt += 1
+            ) {
+                if (state.reconnectCancelled) {
+                    return;
+                }
+
+                state.reconnectAttempt = attempt + 1;
+
+                const waitMs =
+                    Math.min(500 * (2 ** attempt), 8000);
+
+                setConnectionState(
+                    ConnectionState.RECONNECTING,
+                    `Попытка ${attempt + 1} из ` +
+                    `${MAX_RECONNECT_ATTEMPTS}, ожидание ` +
+                    `${waitMs / 1000} с`
+                );
+
+                await delay(waitMs);
+
+                try {
+                    await establishGattConnection();
+                    showToast("Соединение восстановлено");
+                    return;
+                } catch (error) {
+                    console.warn(
+                        "Reconnect failed",
+                        error
+                    );
+                }
+            }
+
+            setConnectionState(
+                ConnectionState.ERROR,
+                "Автоматическое переподключение не удалось"
+            );
+        }
+
+        function requireReady() {
+            if (
+                state.connection !== ConnectionState.READY ||
+                !state.device ||
+                !state.device.gatt.connected
+            ) {
+                throw new Error(
+                    "Защищённое соединение ещё не готово"
+                );
+            }
+        }
+
+        async function writeCharacteristic(
+            characteristic,
+            payload
+        ) {
+            requireReady();
+
+            if (!characteristic) {
+                throw new Error(
+                    "BLE-характеристика не найдена"
+                );
+            }
+
+            await characteristic.writeValueWithResponse(
+                payload
+            );
+        }
+
+        async function unlockDoor() {
+            elements.unlockButton.disabled = true;
+
+            try {
+                await writeCharacteristic(
+                    state.characteristics.unlock,
+                    Uint8Array.of(0x01)
+                );
+
+                showToast("Команда открытия отправлена");
+            } catch (error) {
+                showToast(
+                    friendlyBluetoothError(error),
+                    6000
+                );
+            } finally {
+                elements.unlockButton.disabled =
+                    state.connection !==
+                    ConnectionState.READY;
+            }
+        }
+
+        function renderGestureSequence() {
+            elements.gestureSequence.innerHTML = "";
+
+            if (state.gestures.length === 0) {
+                const empty =
+                    document.createElement("span");
+
+                empty.className = "muted";
+                empty.textContent =
+                    "Комбинация пока пуста";
+
+                elements.gestureSequence.appendChild(empty);
+                return;
+            }
+
+            state.gestures.forEach((gesture) => {
+                const chip =
+                    document.createElement("span");
+
+                chip.className =
+                    gesture === 6
+                        ? "gesture-chip pause"
+                        : "gesture-chip";
+
+                chip.textContent = Gesture[gesture];
+
+                elements.gestureSequence.appendChild(chip);
+            });
+        }
+
+        function appendGesture(value) {
+            if (state.gestures.length >= MAX_GESTURES) {
+                showToast(
+                    "Достигнут лимит: 32 элемента"
+                );
+                return;
+            }
+
+            if (
+                value === 6 &&
+                (
+                    state.gestures.length === 0 ||
+                    state.gestures[
+                        state.gestures.length - 1
+                    ] === 6
+                )
+            ) {
+                showToast(
+                    "Пауза не может быть первой или идти дважды подряд"
+                );
+                return;
+            }
+
+            state.gestures.push(value);
+            renderGestureSequence();
+        }
+
+        async function saveGesturePassword() {
+            if (state.gestures.length === 0) {
+                showToast("Введите комбинацию");
+                return;
+            }
+
+            try {
+                await writeCharacteristic(
+                    state.characteristics.gesturePassword,
+                    Uint8Array.from(state.gestures)
+                );
+
+                showToast(
+                    "Новый жестовый пароль сохранён"
+                );
+            } catch (error) {
+                showToast(
+                    friendlyBluetoothError(error),
+                    6000
+                );
+            }
+        }
+
+        async function saveDeviceName() {
+            const name =
+                elements.deviceNameInput.value.trim();
+
+            if (!name) {
+                showToast(
+                    "Имя устройства не может быть пустым"
+                );
+                return;
+            }
+
+            const encoded = new TextEncoder().encode(name);
+
+            if (encoded.length > 24) {
+                showToast(
+                    "Имя превышает 24 байта UTF-8"
+                );
+                return;
+            }
+
+            try {
+                await writeCharacteristic(
+                    state.characteristics.deviceName,
+                    encoded
+                );
+
+                showToast(
+                    "Имя сохранено. Если видно старое имя, " +
+                    "обновите Bluetooth-список."
+                );
+            } catch (error) {
+                showToast(
+                    friendlyBluetoothError(error),
+                    6000
+                );
+            }
+        }
+
+        async function savePasskey() {
+            const text =
+                elements.passkeyInput.value.trim();
+
+            if (!/^\d{6}$/.test(text)) {
+                showToast(
+                    "PIN должен состоять ровно из шести цифр"
+                );
+                return;
+            }
+
+            if (
+                !confirm(
+                    "После смены PIN устройство перезапустится, " +
+                    "а все смартфоны потребуется сопрячь заново. " +
+                    "Продолжить?"
+                )
+            ) {
+                return;
+            }
+
+            const value = Number(text);
+            const payload = new Uint8Array(4);
+            const view = new DataView(payload.buffer);
+
+            view.setUint32(0, value, true);
+
+            try {
+                await writeCharacteristic(
+                    state.characteristics.passkey,
+                    payload
+                );
+
+                elements.passkeyInput.value = "";
+
+                showToast(
+                    "PIN сохранён. Ожидается перезапуск ESP32.",
+                    6000
+                );
+            } catch (error) {
+                showToast(
+                    friendlyBluetoothError(error),
+                    6000
+                );
+            }
+        }
+
+        async function sendAdminCommand(command, payload = []) {
+            const request =
+                Uint8Array.from([command, ...payload]);
+
+            await writeCharacteristic(
+                state.characteristics.admin,
+                request
+            );
+        }
+
+        async function requestFactoryReset() {
+            if (
+                !confirm(
+                    "Будут удалены пароль, PIN, имя и все связи. " +
+                    "Продолжить?"
+                )
+            ) {
+                return;
+            }
+
+            state.factoryResetToken = null;
+
+            try {
+                await sendAdminCommand(
+                    AdminCommand.FACTORY_RESET_REQUEST
+                );
+
+                const deadline = Date.now() + 4000;
+
+                while (
+                    !state.factoryResetToken &&
+                    Date.now() < deadline
+                ) {
+                    await delay(100);
+                }
+
+                if (!state.factoryResetToken) {
+                    throw new Error(
+                        "Не получен токен подтверждения сброса"
+                    );
+                }
+
+                if (
+                    !confirm(
+                        "Последнее подтверждение: выполнить " +
+                        "полный заводской сброс?"
+                    )
+                ) {
+                    state.factoryResetToken = null;
+                    return;
+                }
+
+                await sendAdminCommand(
+                    AdminCommand.FACTORY_RESET_CONFIRM,
+                    Array.from(state.factoryResetToken)
+                );
+
+                state.factoryResetToken = null;
+
+                showToast(
+                    "Заводской сброс подтверждён",
+                    6000
+                );
+            } catch (error) {
+                state.factoryResetToken = null;
+
+                showToast(
+                    friendlyBluetoothError(error),
+                    6000
+                );
+            }
+        }
+
+        async function executeAdmin(
+            command,
+            confirmation,
+            successMessage
+        ) {
+            if (
+                confirmation &&
+                !confirm(confirmation)
+            ) {
+                return;
+            }
+
+            try {
+                await sendAdminCommand(command);
+                showToast(successMessage);
+            } catch (error) {
+                showToast(
+                    friendlyBluetoothError(error),
+                    6000
+                );
+            }
+        }
+
+        function friendlyBluetoothError(error) {
+            if (!error) {
+                return "Неизвестная ошибка Bluetooth";
+            }
+
+            if (error.name === "NotFoundError") {
+                return "Устройство не выбрано";
+            }
+
+            if (error.name === "SecurityError") {
+                return "Web Bluetooth требует HTTPS или localhost";
+            }
+
+            if (error.name === "NetworkError") {
+                return (
+                    "Соединение потеряно или pairing не завершён"
+                );
+            }
+
+            if (error.name === "NotAllowedError") {
+                return "Доступ к Bluetooth отклонён";
+            }
+
+            return error.message ||
+                "Ошибка Bluetooth";
+        }
+
+        function delay(milliseconds) {
+            return new Promise((resolve) => {
+                setTimeout(resolve, milliseconds);
+            });
+        }
+
+        elements.connectButton.addEventListener(
+            "click",
+            connectBluetooth
+        );
+
+        elements.disconnectButton.addEventListener(
+            "click",
+            disconnectBluetooth
+        );
+
+        elements.unlockButton.addEventListener(
+            "click",
+            unlockDoor
+        );
+
+        document
+            .querySelectorAll(".gesture-button")
+            .forEach((button) => {
+                button.addEventListener("click", () => {
+                    appendGesture(
+                        Number(button.dataset.gesture)
+                    );
+                });
+            });
+
+        elements.removeGestureButton.addEventListener(
+            "click",
+            () => {
+                state.gestures.pop();
+                renderGestureSequence();
+            }
+        );
+
+        elements.clearGestureButton.addEventListener(
+            "click",
+            () => {
+                state.gestures.length = 0;
+                renderGestureSequence();
+            }
+        );
+
+        elements.saveGestureButton.addEventListener(
+            "click",
+            saveGesturePassword
+        );
+
+        elements.saveNameButton.addEventListener(
+            "click",
+            saveDeviceName
+        );
+
+        elements.savePasskeyButton.addEventListener(
+            "click",
+            savePasskey
+        );
+
+        elements.rebaseButton.addEventListener(
+            "click",
+            () => executeAdmin(
+                AdminCommand.SENSOR_REBASE,
+                null,
+                "Перекалибровка сенсоров запущена"
+            )
+        );
+
+        elements.clearDiagnosticsButton.addEventListener(
+            "click",
+            () => executeAdmin(
+                AdminCommand.CLEAR_DIAGNOSTICS,
+                null,
+                "Диагностические счётчики очищены"
+            )
+        );
+
+        elements.deleteBondsButton.addEventListener(
+            "click",
+            () => executeAdmin(
+                AdminCommand.DELETE_ALL_BONDS,
+                "Удалить все доверенные устройства?",
+                "Связи удаляются. Ожидается перезапуск."
+            )
+        );
+
+        elements.rebootButton.addEventListener(
+            "click",
+            () => executeAdmin(
+                AdminCommand.REBOOT,
+                "Перезагрузить ESP32?",
+                "Команда перезагрузки отправлена"
+            )
+        );
+
+        elements.factoryResetButton.addEventListener(
+            "click",
+            requestFactoryReset
+        );
+
+        window.addEventListener("beforeunload", () => {
+            state.reconnectCancelled = true;
+
+            if (
+                state.device &&
+                state.device.gatt.connected
+            ) {
+                state.device.gatt.disconnect();
             }
         });
 
-        // Логика набора пароля
-        window.addGesture = function(code, name) {
-            if (newPasswordSequence.length >= 10) {
-                alert('Максимальная длина пароля - 10 жестов');
-                return;
-            }
-            newPasswordSequence.push(code);
-            newPasswordText.push(name);
-            sequenceDisplay.innerText = newPasswordText.join(' - ');
-        };
+        renderGestureSequence();
 
-        window.clearGestures = function() {
-            newPasswordSequence = [];
-            newPasswordText = [];
-            sequenceDisplay.innerText = '';
-        };
-
-        // Сохранение пароля
-        document.getElementById('btnSavePass').addEventListener('click', async () => {
-            if (!passCharacteristic) return;
-            if (newPasswordSequence.length === 0) {
-                alert('Введите хотя бы один жест!');
-                return;
-            }
-            try {
-                const payload = new Uint8Array(newPasswordSequence);
-                await passCharacteristic.writeValue(payload);
-                alert('Новый пароль успешно сохранен в устройстве!');
-                clearGestures();
-            } catch (error) {
-                console.error(error);
-                alert('Ошибка сохранения: ' + error.message);
-            }
-        });
+        setConnectionState(
+            ConnectionState.DISCONNECTED
+        );
     </script>
 </body>
 </html>
