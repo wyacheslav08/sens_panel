@@ -518,48 +518,13 @@
                 не может быть первым элементом.
             </p>
 
+            <!-- Удалена кнопка паузы из блока .gesture-builder -->
             <div class="gesture-builder">
-                <button
-                    class="secondary gesture-button"
-                    data-gesture="1"
-                >
-                    ⬆️ Вверх
-                </button>
-
-                <button
-                    class="secondary gesture-button"
-                    data-gesture="2"
-                >
-                    ⬇️ Вниз
-                </button>
-
-                <button
-                    class="secondary gesture-button"
-                    data-gesture="3"
-                >
-                    ⬅️ Влево
-                </button>
-
-                <button
-                    class="secondary gesture-button"
-                    data-gesture="4"
-                >
-                    ➡️ Вправо
-                </button>
-
-                <button
-                    class="secondary gesture-button"
-                    data-gesture="5"
-                >
-                    🟢 Тап
-                </button>
-
-                <button
-                    class="warning gesture-button"
-                    data-gesture="6"
-                >
-                    ⏸ Пауза
-                </button>
+                <button class="secondary gesture-button" data-gesture="1">⬆️ Вверх</button>
+                <button class="secondary gesture-button" data-gesture="2">⬇️ Вниз</button>
+                <button class="secondary gesture-button" data-gesture="3">⬅️ Влево</button>
+                <button class="secondary gesture-button" data-gesture="4">➡️ Вправо</button>
+                <button class="secondary gesture-button" data-gesture="5">🟢 Тап</button>
             </div>
 
             <div
@@ -793,8 +758,7 @@
             2: "⬇️ Вниз",
             3: "⬅️ Влево",
             4: "➡️ Вправо",
-            5: "🟢 Тап",
-            6: "⏸ Пауза"
+            5: "🟢 Тап"
         });
 
         const ServerState = Object.freeze({
@@ -1492,27 +1456,12 @@
 
         function appendGesture(value) {
             if (state.gestures.length >= MAX_GESTURES) {
-                showToast(
-                    "Достигнут лимит: 32 элемента"
-                );
+                showToast("Достигнут лимит: 32 элемента");
                 return;
             }
-
-            if (
-                value === 6 &&
-                (
-                    state.gestures.length === 0 ||
-                    state.gestures[
-                        state.gestures.length - 1
-                    ] === 6
-                )
-            ) {
-                showToast(
-                    "Пауза не может быть первой или идти дважды подряд"
-                );
+            if (value < 1 || value > 5) {
                 return;
             }
-
             state.gestures.push(value);
             renderGestureSequence();
         }
