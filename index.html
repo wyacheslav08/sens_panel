@@ -1,4 +1,4 @@
-<!-- Путь: web/hidden_lock_web.html -->
+<!-- Путь: web/index.html -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -282,10 +282,6 @@
             font-size: 14px;
         }
 
-        .gesture-chip.pause {
-            background: #92400e;
-        }
-
         .field {
             margin-top: 12px;
         }
@@ -516,7 +512,6 @@
                 До 32 элементов. Допустимы физические жесты: Вверх, Вниз, Влево, Вправо, Тап.
             </p>
 
-            <!-- Удалена кнопка паузы из блока .gesture-builder -->
             <div class="gesture-builder">
                 <button class="secondary gesture-button" data-gesture="1">⬆️ Вверх</button>
                 <button class="secondary gesture-button" data-gesture="2">⬇️ Вниз</button>
@@ -625,6 +620,7 @@
         <section class="card">
             <h2>Обслуживание</h2>
 
+            <div class="button-row">
                 <button
                     id="startCalibrationButton"
                     class="success"
@@ -722,8 +718,8 @@
             </p>
 
             <p class="muted">
-                При первом подключении система может запросить PIN-код.
-                Дождитесь завершения сопряжения.
+                При первом подключении система запросит PIN-код (по умолчанию 123456).
+                При повторных подключениях вход выполняется автоматически.
             </p>
 
             <div class="progress"></div>
@@ -989,10 +985,10 @@
                     elements.statusText.textContent =
                         "Проверка защищённого соединения";
                     elements.statusSubtext.textContent =
-                        details || "Ожидание pairing и bonding";
+                        details || "Ожидание шифрования / сопряжения";
                     setReadyControls(false);
                     showConnectionModal(
-                        "Ожидание ввода PIN и завершения сопряжения…"
+                        "Проверка ключей безопасности (введите PIN при запросе)…"
                     );
                     break;
 
@@ -1104,7 +1100,7 @@
             if (ready) {
                 setConnectionState(
                     ConnectionState.READY,
-                    "Сопряжение завершено, команды разрешены"
+                    "Сопряжение активно, команды разрешены"
                 );
             } else {
                 setConnectionState(
@@ -1148,25 +1144,54 @@
                 );
         }
 
+        async function readStatusWithPairingRetry() {
+            const deadline = Date.now() + 45000;
+            let lastError = null;
+
+            while (Date.now() < deadline) {
+                if (!state.device || !state.device.gatt.connected) {
+                    throw new Error("Соединение прервано во время сопряжения");
+                }
+
+                try {
+                    const statusValue =
+                        await state.characteristics.status.readValue();
+                    return parseStatus(statusValue);
+                } catch (error) {
+                    lastError = error;
+                    /*
+                     * При первом подключении ОС смартфона открывает диалоговое окно
+                     * ввода PIN-кода. Пока пользователь вводит PIN, первый вызов
+                     * readValue() на некоторых версиях Android может завершиться
+                     * ошибкой до завершения SMP-процедуры. Повторяем опрос до
+                     * окончания ввода PIN без разрыва соединения.
+                     */
+                    await delay(600);
+                }
+            }
+
+            throw lastError || new Error("Время ожидания ввода PIN-кода истекло");
+        }
+
         async function authenticateAndBecomeReady() {
             setConnectionState(
                 ConnectionState.AUTHENTICATING
             );
 
-            /*
-             * Защищённое чтение STATUS немедленно запускает
-             * системную процедуру pairing. Кнопка замка до READY
-             * остаётся отключённой.
-             */
-            const statusValue =
-                await state.characteristics.status.readValue();
-
-            const status = parseStatus(statusValue);
+            const status = await readStatusWithPairingRetry();
             updateStatusView(status);
+
+            if (!updateStatusView(status)) {
+                await waitUntilReady();
+            }
 
             await state.characteristics.status
                 .startNotifications();
 
+            state.characteristics.status.removeEventListener(
+                "characteristicvaluechanged",
+                handleStatusNotification
+            );
             state.characteristics.status.addEventListener(
                 "characteristicvaluechanged",
                 handleStatusNotification
@@ -1175,6 +1200,10 @@
             await state.characteristics.admin
                 .startNotifications();
 
+            state.characteristics.admin.removeEventListener(
+                "characteristicvaluechanged",
+                handleAdminNotification
+            );
             state.characteristics.admin.addEventListener(
                 "characteristicvaluechanged",
                 handleAdminNotification
@@ -1185,14 +1214,10 @@
 
             elements.deviceNameInput.value =
                 new TextDecoder().decode(nameValue);
-
-            if (!updateStatusView(status)) {
-                await waitUntilReady();
-            }
         }
 
         async function waitUntilReady() {
-            const deadline = Date.now() + 30000;
+            const deadline = Date.now() + 45000;
 
             while (Date.now() < deadline) {
                 if (
@@ -1204,13 +1229,17 @@
                     );
                 }
 
-                const value =
-                    await state.characteristics.status.readValue();
+                try {
+                    const value =
+                        await state.characteristics.status.readValue();
 
-                const status = parseStatus(value);
+                    const status = parseStatus(value);
 
-                if (updateStatusView(status)) {
-                    return;
+                    if (updateStatusView(status)) {
+                        return;
+                    }
+                } catch (_) {
+                    /* Ждём завершения сопряжения в ОС */
                 }
 
                 await delay(500);
@@ -1310,6 +1339,40 @@
             state.reconnectCancelled = false;
         }
 
+        function attachDeviceListener(device) {
+            if (!device) {
+                return;
+            }
+            device.removeEventListener(
+                "gattserverdisconnected",
+                handleDisconnection
+            );
+            device.addEventListener(
+                "gattserverdisconnected",
+                handleDisconnection
+            );
+        }
+
+        async function tryRestoreSavedDevice() {
+            if (
+                !navigator.bluetooth ||
+                typeof navigator.bluetooth.getDevices !== "function"
+            ) {
+                return null;
+            }
+
+            try {
+                const devices = await navigator.bluetooth.getDevices();
+                if (devices && devices.length > 0) {
+                    return devices[0];
+                }
+            } catch (error) {
+                console.warn("getDevices() unavailable:", error);
+            }
+
+            return null;
+        }
+
         async function connectBluetooth() {
             if (!navigator.bluetooth) {
                 showToast(
@@ -1322,6 +1385,31 @@
             state.reconnectCancelled = false;
 
             try {
+                if (!state.device) {
+                    const restored = await tryRestoreSavedDevice();
+                    if (restored) {
+                        state.device = restored;
+                        attachDeviceListener(state.device);
+                    }
+                }
+
+                if (state.device) {
+                    try {
+                        setConnectionState(
+                            ConnectionState.DEVICE_SELECTED,
+                            state.device.name || "Сохранённое устройство"
+                        );
+                        await establishGattConnection();
+                        return;
+                    } catch (fastReconnectError) {
+                        console.warn(
+                            "Fast reconnect to cached device failed, opening chooser:",
+                            fastReconnectError
+                        );
+                        state.device = null;
+                    }
+                }
+
                 setConnectionState(
                     ConnectionState.SCANNING
                 );
@@ -1335,10 +1423,7 @@
                         ]
                     });
 
-                state.device.addEventListener(
-                    "gattserverdisconnected",
-                    handleDisconnection
-                );
+                attachDeviceListener(state.device);
 
                 setConnectionState(
                     ConnectionState.DEVICE_SELECTED,
@@ -1741,7 +1826,7 @@
 
             if (error.name === "NetworkError") {
                 return (
-                    "Соединение потеряно или pairing не завершён"
+                    "Соединение потеряно или сопряжение было отклонено"
                 );
             }
 
@@ -1815,7 +1900,7 @@
             savePasskey
         );
 
-                elements.rebaseButton.addEventListener(
+        elements.rebaseButton.addEventListener(
             "click",
             () => executeAdmin(
                 AdminCommand.SENSOR_REBASE,
