@@ -512,10 +512,8 @@
 
         <section class="card">
             <h2>Жестовый пароль</h2>
-
             <p class="muted">
-                До 32 элементов. Пауза формируется по времени и
-                не может быть первым элементом.
+                До 32 элементов. Допустимы физические жесты: Вверх, Вниз, Влево, Вправо, Тап.
             </p>
 
             <!-- Удалена кнопка паузы из блока .gesture-builder -->
@@ -627,7 +625,33 @@
         <section class="card">
             <h2>Обслуживание</h2>
 
-            <div class="button-row">
+                <button
+                    id="startCalibrationButton"
+                    class="success"
+                    data-requires-ready
+                    disabled
+                >
+                    🎯 Мастер калибровки (25 жестов)
+                </button>
+
+                <button
+                    id="cancelCalibrationButton"
+                    class="secondary"
+                    data-requires-ready
+                    disabled
+                >
+                    Остановить калибровку
+                </button>
+
+                <button
+                    id="resetCalibrationButton"
+                    class="secondary"
+                    data-requires-ready
+                    disabled
+                >
+                    Сбросить калибровку
+                </button>
+
                 <button
                     id="rebaseButton"
                     class="secondary"
@@ -750,7 +774,11 @@
             CLEAR_DIAGNOSTICS: 0x03,
             FACTORY_RESET_REQUEST: 0x04,
             FACTORY_RESET_CONFIRM: 0x05,
-            DELETE_ALL_BONDS: 0x06
+            DELETE_ALL_BONDS: 0x06,
+            CALIBRATION_START: 0x07,
+            CALIBRATION_CANCEL: 0x08,
+            CALIBRATION_RESET: 0x09,
+            CALIBRATION_PROGRESS: 0x0A
         });
 
         const Gesture = Object.freeze({
@@ -1220,6 +1248,41 @@
                             value.byteOffset + 5
                         )
                     );
+                return;
+            }
+
+            if (
+                value.byteLength >= 6 &&
+                value.getUint8(0) ===
+                    AdminCommand.CALIBRATION_PROGRESS
+            ) {
+                const status = value.getUint8(1);
+                const step = value.getUint8(2);
+                const rep = value.getUint8(3);
+                const gestureId = value.getUint8(4);
+                const totalReps = value.getUint8(5);
+                const gestureName = Gesture[gestureId] || "Жест";
+
+                if (status === 1) {
+                    showToast(
+                        `Калибровка (Этап ${step + 1}/5): выполните ${gestureName} — осталось ${totalReps - rep} из ${totalReps}`,
+                        8000
+                    );
+                } else if (status === 3) {
+                    showToast(
+                        `Повторите ${gestureName} отчётливее! (Этап ${step + 1}/5, осталось ${totalReps - rep})`,
+                        6000
+                    );
+                } else if (status === 2) {
+                    showToast(
+                        "✅ Автокалибровка успешно завершена и сохранена в память!",
+                        7000
+                    );
+                } else if (status === 4) {
+                    showToast("Калибровка отменена", 4000);
+                } else if (status === 5) {
+                    showToast("Калибровка сброшена к заводским значениям", 4000);
+                }
             }
         }
 
@@ -1440,16 +1503,9 @@
             }
 
             state.gestures.forEach((gesture) => {
-                const chip =
-                    document.createElement("span");
-
-                chip.className =
-                    gesture === 6
-                        ? "gesture-chip pause"
-                        : "gesture-chip";
-
-                chip.textContent = Gesture[gesture];
-
+                const chip = document.createElement("span");
+                chip.className = "gesture-chip";
+                chip.textContent = Gesture[gesture] || "Жест";
                 elements.gestureSequence.appendChild(chip);
             });
         }
@@ -1759,7 +1815,7 @@
             savePasskey
         );
 
-        elements.rebaseButton.addEventListener(
+                elements.rebaseButton.addEventListener(
             "click",
             () => executeAdmin(
                 AdminCommand.SENSOR_REBASE,
@@ -1767,6 +1823,45 @@
                 "Перекалибровка сенсоров запущена"
             )
         );
+
+        const startCalibrationButton =
+            document.getElementById("startCalibrationButton");
+        if (startCalibrationButton) {
+            startCalibrationButton.addEventListener(
+                "click",
+                () => executeAdmin(
+                    AdminCommand.CALIBRATION_START,
+                    "Запустить мастер калибровки (по 5 свайпов ВЛЕВО, ВПРАВО, ВВЕРХ, ВНИЗ и 5 ТАПОВ разными способами)?",
+                    "Мастер калибровки запущен! Следуйте подсказкам."
+                )
+            );
+        }
+
+        const cancelCalibrationButton =
+            document.getElementById("cancelCalibrationButton");
+        if (cancelCalibrationButton) {
+            cancelCalibrationButton.addEventListener(
+                "click",
+                () => executeAdmin(
+                    AdminCommand.CALIBRATION_CANCEL,
+                    null,
+                    "Калибровка остановлена"
+                )
+            );
+        }
+
+        const resetCalibrationButton =
+            document.getElementById("resetCalibrationButton");
+        if (resetCalibrationButton) {
+            resetCalibrationButton.addEventListener(
+                "click",
+                () => executeAdmin(
+                    AdminCommand.CALIBRATION_RESET,
+                    "Сбросить калибровку сенсора к базовым параметрам?",
+                    "Калибровка сброшена к заводским настройкам"
+                )
+            );
+        }
 
         elements.clearDiagnosticsButton.addEventListener(
             "click",
