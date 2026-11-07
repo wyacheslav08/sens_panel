@@ -534,6 +534,12 @@
                     <span class="muted">Доверенных устройств</span>
                     <strong id="bondCountValue">0</strong>
                 </div>
+
+                <div class="security-item">
+                    <span class="muted">Чип сенсора</span>
+                    <strong id="sensorChipValue">—</strong>
+                </div>
+
             </div>
 
             <div
@@ -968,6 +974,8 @@
                 document.getElementById("bondedValue"),
             bondCountValue:
                 document.getElementById("bondCountValue"),
+            sensorChipValue:
+                document.getElementById("sensorChipValue"),
 
             connectButton:
                 document.getElementById("connectButton"),
@@ -1230,7 +1238,13 @@
                 authenticationFailures:
                     dataView.getUint32(12, true),
                 rejectedCommands:
-                    dataView.getUint32(16, true)
+                    dataView.getUint32(16, true),
+                sensorType:
+                    dataView.getUint8(20),
+                sensorCount:
+                    dataView.getUint8(21),
+                sensorMask:
+                    dataView.getUint8(22)
             };
         }
 
@@ -1246,6 +1260,19 @@
 
             elements.bondCountValue.textContent =
                 String(status.bondCount);
+
+            if (elements.sensorChipValue) {
+                if (status.sensorType === 1) {
+                    elements.sensorChipValue.textContent =
+                        `FDC1004 (${status.sensorCount} шт.)`;
+                } else if (status.sensorType === 2) {
+                    elements.sensorChipValue.textContent =
+                        `MPR121 (${status.sensorCount} шт.)`;
+                } else {
+                    elements.sensorChipValue.textContent =
+                        "Не обнаружен";
+                }
+            }
 
             const ready =
                 status.serverState === ServerState.READY &&
