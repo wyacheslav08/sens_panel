@@ -1334,12 +1334,12 @@
         }
 
         async function readStatusWithPairingRetry() {
-            const deadline = Date.now() + 45000;
+            const deadline = Date.now() + 35000;
             let lastError = null;
 
             while (Date.now() < deadline) {
                 if (!state.device || !state.device.gatt.connected) {
-                    throw new Error("Соединение прервано во время сопряжения");
+                    throw new Error("Соединение прервано (проверьте PIN или удалите старое сопряжение в настройках Bluetooth)");
                 }
 
                 try {
@@ -1414,7 +1414,7 @@
         }
 
         async function waitUntilReady() {
-            const deadline = Date.now() + 45000;
+            const deadline = Date.now() + 35000;
 
             while (Date.now() < deadline) {
                 if (
@@ -1883,8 +1883,7 @@
                 );
 
                 showToast(
-                    "Имя сохранено. Если видно старое имя, " +
-                    "обновите Bluetooth-список."
+                    "Имя устройства успешно обновлено"
                 );
             } catch (error) {
                 showToast(
@@ -1921,6 +1920,9 @@
 
             view.setUint32(0, value, true);
 
+            state.manualDisconnect = true;
+            state.reconnectCancelled = true;
+
             try {
                 await writeCharacteristic(
                     state.characteristics.passkey,
@@ -1928,12 +1930,16 @@
                 );
 
                 elements.passkeyInput.value = "";
+                state.device = null;
 
                 showToast(
-                    "PIN сохранён. Ожидается перезапуск ESP32.",
-                    6000
+                    "PIN изменён! Нажмите «Подключиться по Bluetooth» и введите новый PIN.",
+                    7000
                 );
             } catch (error) {
+                state.manualDisconnect = false;
+                state.reconnectCancelled = false;
+
                 showToast(
                     friendlyBluetoothError(error),
                     6000
@@ -1993,19 +1999,25 @@
                     return;
                 }
 
+                state.manualDisconnect = true;
+                state.reconnectCancelled = true;
+
                 await sendAdminCommand(
                     AdminCommand.FACTORY_RESET_CONFIRM,
                     Array.from(state.factoryResetToken)
                 );
 
                 state.factoryResetToken = null;
+                state.device = null;
 
                 showToast(
-                    "Заводской сброс подтверждён",
-                    6000
+                    "Заводской сброс выполнен! Переподключитесь с заводским PIN 123456.",
+                    7000
                 );
             } catch (error) {
                 state.factoryResetToken = null;
+                state.manualDisconnect = false;
+                state.reconnectCancelled = false;
 
                 showToast(
                     friendlyBluetoothError(error),
@@ -2017,7 +2029,8 @@
         async function executeAdmin(
             command,
             confirmation,
-            successMessage
+            successMessage,
+            clearsBonds = false
         ) {
             if (
                 confirmation &&
@@ -2026,10 +2039,22 @@
                 return;
             }
 
+            if (clearsBonds) {
+                state.manualDisconnect = true;
+                state.reconnectCancelled = true;
+            }
+
             try {
                 await sendAdminCommand(command);
-                showToast(successMessage);
+                if (clearsBonds) {
+                    state.device = null;
+                }
+                showToast(successMessage, 6000);
             } catch (error) {
+                if (clearsBonds) {
+                    state.manualDisconnect = false;
+                    state.reconnectCancelled = false;
+                }
                 showToast(
                     friendlyBluetoothError(error),
                     6000
@@ -2052,7 +2077,7 @@
 
             if (error.name === "NetworkError") {
                 return (
-                    "Соединение потеряно или сопряжение было отклонено"
+                    "Соединение потеряно или старая привязка недействительна"
                 );
             }
 
@@ -2213,7 +2238,8 @@
             () => executeAdmin(
                 AdminCommand.DELETE_ALL_BONDS,
                 "Удалить все доверенные устройства?",
-                "Связи удаляются. Ожидается перезапуск."
+                "Связи удалены. Нажмите «Подключиться по Bluetooth» для нового сопряжения.",
+                true
             )
         );
 
