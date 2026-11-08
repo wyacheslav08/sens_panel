@@ -483,11 +483,10 @@
 </head>
 
 <body>
-    <main class="page">
-        <header class="header">
+    <main class="page">        <header class="header">
             <h1>🔐 Скрытый замок</h1>
-            <p>
-                ESP32-WROOM-32 · защищённое управление по Bluetooth LE
+            <p id="boardHeaderSubtitle">
+                ESP32-WROOM-32 / ESP32-C3 Super Mini · защищённое управление по Bluetooth LE
             </p>
         </header>
 
@@ -533,6 +532,11 @@
                 <div class="security-item">
                     <span class="muted">Доверенных устройств</span>
                     <strong id="bondCountValue">0</strong>
+                </div>
+
+                <div class="security-item">
+                    <span class="muted">Плата системы</span>
+                    <strong id="boardModelValue">—</strong>
                 </div>
 
                 <div class="security-item">
@@ -970,6 +974,8 @@
                 document.getElementById("encryptedValue"),
             authenticatedValue:
                 document.getElementById("authenticatedValue"),
+            boardHeaderSubtitle:
+                document.getElementById("boardHeaderSubtitle"),
             bondedValue:
                 document.getElementById("bondedValue"),
             bondCountValue:
@@ -1244,7 +1250,9 @@
                 sensorCount:
                     dataView.getUint8(21),
                 sensorMask:
-                    dataView.getUint8(22)
+                    dataView.getUint8(22),
+                boardType:
+                    dataView.getUint8(23)
             };
         }
 
@@ -1291,6 +1299,26 @@
                     ConnectionState.AUTHENTICATING,
                     "Дождитесь системного окна ввода PIN"
                 );
+            }
+
+                    /* В функции updateStatusView(status): */
+            if (elements.boardModelValue) {
+                let boardLabel = "ESP32 (Авто)";
+                if (status.boardType === 1) {
+                    boardLabel = "ESP32-WROOM-32";
+                } else if (status.boardType === 2) {
+                    boardLabel = "ESP32-C3 Super Mini";
+                }
+                elements.boardModelValue.textContent = boardLabel;
+
+                if (elements.boardHeaderSubtitle && status.boardType !== 0) {
+                    elements.boardHeaderSubtitle.textContent =
+                        `${boardLabel} · защищённое управление по Bluetooth LE`;
+                }
+                if (elements.rebootButton && status.boardType !== 0) {
+                    elements.rebootButton.textContent =
+                        `Перезагрузить ${boardLabel}`;
+                }
             }
 
             return ready;
