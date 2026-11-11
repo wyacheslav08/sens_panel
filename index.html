@@ -399,15 +399,15 @@
                 </div>
                 <div class="security-item">
                     <span class="muted">Порог касания</span>
-                    <strong id="sensLiveTouchValue">95 fF</strong>
+                    <strong id="sensLiveTouchValue">175 fF</strong>
                 </div>
                 <div class="security-item">
                     <span class="muted">Порог отпускания</span>
-                    <strong id="sensLiveReleaseValue">70 fF</strong>
+                    <strong id="sensLiveReleaseValue">150 fF</strong>
                 </div>
                 <div class="security-item">
                     <span class="muted">Размах свайпа</span>
-                    <strong id="sensLiveSwingValue">75 fF</strong>
+                    <strong id="sensLiveSwingValue">55 fF</strong>
                 </div>
                 <div class="security-item">
                     <span class="muted">Шум питания (фон)</span>
@@ -426,13 +426,13 @@
                 <label>Быстрые профили под экранированную панель:</label>
                 <div class="button-row">
                     <button type="button" id="presetHigh12vButton" class="secondary">
-                        ⚡ Чувствительный (130 / 112 / 95 fF)
+                        ⚡ Чувствительный (155 / 135 / 50 fF)
                     </button>
                     <button type="button" id="presetBalancedButton" class="secondary">
-                        🛡️ Оптимальный (150 / 130 / 105 fF)
+                        🛡️ Оптимальный (175 / 150 / 55 fF)
                     </button>
                     <button type="button" id="presetUsbButton" class="secondary">
-                        🔒 Грубый (175 / 150 / 120 fF)
+                        🔒 Грубый (195 / 170 / 65 fF)
                     </button>
                 </div>
             </div>
@@ -442,11 +442,11 @@
                     <label for="touchThreshRange" style="margin: 0">
                         Порог касания (меньше = выше чувствительность пальца)
                     </label>
-                    <span id="touchThreshBadge" class="volume-badge">95 fF</span>
+                    <span id="touchThreshBadge" class="volume-badge">175 fF</span>
                 </div>
                 <div class="volume-controls">
                     <button id="touchDownButton" type="button" class="secondary">−5</button>
-                    <input id="touchThreshRange" type="range" min="50" max="240" step="5" value="95">
+                    <input id="touchThreshRange" type="range" min="50" max="240" step="5" value="175">
                     <button id="touchUpButton" type="button" class="secondary">+5</button>
                 </div>
             </div>
@@ -456,11 +456,11 @@
                     <label for="releaseThreshRange" style="margin: 0">
                         Порог отпускания (должен быть ниже порога касания на 15..30 fF)
                     </label>
-                    <span id="releaseThreshBadge" class="volume-badge">70 fF</span>
+                    <span id="releaseThreshBadge" class="volume-badge">150 fF</span>
                 </div>
                 <div class="volume-controls">
                     <button id="releaseDownButton" type="button" class="secondary">−5</button>
-                    <input id="releaseThreshRange" type="range" min="35" max="210" step="5" value="70">
+                    <input id="releaseThreshRange" type="range" min="35" max="210" step="5" value="150">
                     <button id="releaseUpButton" type="button" class="secondary">+5</button>
                 </div>
             </div>
@@ -470,11 +470,11 @@
                     <label for="swingThreshRange" style="margin: 0">
                         Порог свайпа / размах моста (меньше = легче свайп одним пальцем)
                     </label>
-                    <span id="swingThreshBadge" class="volume-badge">75 fF</span>
+                    <span id="swingThreshBadge" class="volume-badge">55 fF</span>
                 </div>
                 <div class="volume-controls">
                     <button id="swingDownButton" type="button" class="secondary">−5</button>
-                    <input id="swingThreshRange" type="range" min="50" max="170" step="5" value="75">
+                    <input id="swingThreshRange" type="range" min="45" max="170" step="5" value="55">
                     <button id="swingUpButton" type="button" class="secondary">+5</button>
                 </div>
             </div>
@@ -1620,13 +1620,13 @@
         });
 
         document.getElementById("presetHigh12vButton").addEventListener("click", () =>
-            applyPresetValues(130, 112, 95, false)
+            applyPresetValues(155, 135, 50, false)
         );
         document.getElementById("presetBalancedButton").addEventListener("click", () =>
-            applyPresetValues(150, 130, 105, true)
+            applyPresetValues(175, 150, 55, true)
         );
         document.getElementById("presetUsbButton").addEventListener("click", () =>
-            applyPresetValues(175, 150, 120, false)
+            applyPresetValues(195, 170, 65, false)
         );
 
         elements.saveSensitivityButton.addEventListener("click", () => saveSensitivityConfig(false));
