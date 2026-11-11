@@ -423,16 +423,16 @@
             </div>
 
             <div class="field">
-                <label>Быстрые профили под питание и толщину панели:</label>
+                <label>Быстрые профили под экранированную панель:</label>
                 <div class="button-row">
                     <button type="button" id="presetHigh12vButton" class="secondary">
-                        ⚡ Высокая (БП 12В / 1 палец: 85/62/68 fF)
+                        ⚡ Чувствительный (130 / 112 / 95 fF)
                     </button>
                     <button type="button" id="presetBalancedButton" class="secondary">
-                        ⚖️ Средняя (Универсальная: 95/70/75 fF)
+                        🛡️ Оптимальный (150 / 130 / 105 fF)
                     </button>
                     <button type="button" id="presetUsbButton" class="secondary">
-                        🔌 Грубая (USB / Сильный сигнал: 150/115/110 fF)
+                        🔒 Грубый (175 / 150 / 120 fF)
                     </button>
                 </div>
             </div>
@@ -865,7 +865,7 @@
             rangeEl.value = String(next);
             if (isTouch) {
                 elements.releaseThreshRange.value = String(
-                    Math.max(35, Math.round((next * 0.74) / 5) * 5)
+                    Math.max(35, Math.min(next - 15, Math.round((next * 0.86) / 5) * 5))
                 );
             }
             elements.sensAutocalCheckbox.checked = false;
@@ -1583,11 +1583,13 @@
         elements.sensAutocalCheckbox.addEventListener("change", updateSensitivityBadges);
         elements.touchThreshRange.addEventListener("input", () => {
             elements.sensAutocalCheckbox.checked = false;
+            const touchVal = Number(elements.touchThreshRange.value);
             elements.releaseThreshRange.value = String(
-                Math.max(35, Math.round((Number(elements.touchThreshRange.value) * 0.74) / 5) * 5)
+                Math.max(35, Math.min(touchVal - 15, Math.round((touchVal * 0.86) / 5) * 5))
             );
             updateSensitivityBadges();
         });
+        
         elements.releaseThreshRange.addEventListener("input", () => {
             elements.sensAutocalCheckbox.checked = false;
             updateSensitivityBadges();
@@ -1618,13 +1620,13 @@
         });
 
         document.getElementById("presetHigh12vButton").addEventListener("click", () =>
-            applyPresetValues(85, 62, 68, false)
+            applyPresetValues(130, 112, 95, false)
         );
         document.getElementById("presetBalancedButton").addEventListener("click", () =>
-            applyPresetValues(95, 70, 75, true)
+            applyPresetValues(150, 130, 105, true)
         );
         document.getElementById("presetUsbButton").addEventListener("click", () =>
-            applyPresetValues(150, 115, 110, false)
+            applyPresetValues(175, 150, 120, false)
         );
 
         elements.saveSensitivityButton.addEventListener("click", () => saveSensitivityConfig(false));
