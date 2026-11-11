@@ -423,16 +423,16 @@
             </div>
 
             <div class="field">
-                <label>Быстрые профили под экранированную панель:</label>
+                <label>Быстрые профили под экранированную панель (нажатие сразу применяет профиль):</label>
                 <div class="button-row">
                     <button type="button" id="presetHigh12vButton" class="secondary">
-                        ⚡ Чувствительный (155 / 135 / 50 fF)
+                        ⚡ Мягкий свайп (175 / 150 / 80 fF)
                     </button>
                     <button type="button" id="presetBalancedButton" class="secondary">
-                        🛡️ Оптимальный (175 / 150 / 55 fF)
+                        🛡️ Баланс Тап/Свайп (175 / 150 / 90 fF)
                     </button>
                     <button type="button" id="presetUsbButton" class="secondary">
-                        🔒 Грубый (195 / 170 / 65 fF)
+                        🔒 Строгий Тап (185 / 160 / 105 fF)
                     </button>
                 </div>
             </div>
@@ -899,7 +899,7 @@
 
                     elements.touchThreshRange.value = String(Math.min(240, Math.max(50, touch)));
                     elements.releaseThreshRange.value = String(Math.min(210, Math.max(35, release)));
-                    elements.swingThreshRange.value = String(Math.min(170, Math.max(50, swing)));
+                    elements.swingThreshRange.value = String(Math.min(170, Math.max(45, swing)));
 
                     elements.sensModeStatusValue.textContent = autocal ? "Авто (БП/Шум)" : "Ручной";
                     elements.sensLiveTouchValue.textContent = `${touch} fF`;
@@ -951,6 +951,20 @@
                 );
             } catch (error) {
                 showToast(friendlyBluetoothError(error), 6000);
+            }
+        }
+
+        async function applyPresetValues(touch, release, swing, autocal) {
+            elements.touchThreshRange.value = String(touch);
+            elements.releaseThreshRange.value = String(release);
+            elements.swingThreshRange.value = String(swing);
+            elements.sensAutocalCheckbox.checked = autocal;
+            updateSensitivityBadges();
+
+            if (state.connection === ConnectionState.READY && state.characteristics.sensitivityConfig) {
+                await saveSensitivityConfig(false);
+            } else {
+                showToast(`Выбран профиль: ${touch}/${release} fF, свайп ${swing} fF`);
             }
         }
 
@@ -1620,13 +1634,13 @@
         });
 
         document.getElementById("presetHigh12vButton").addEventListener("click", () =>
-            applyPresetValues(155, 135, 50, false)
+            applyPresetValues(175, 150, 80, false)
         );
         document.getElementById("presetBalancedButton").addEventListener("click", () =>
-            applyPresetValues(175, 150, 55, true)
+            applyPresetValues(175, 150, 90, true)
         );
         document.getElementById("presetUsbButton").addEventListener("click", () =>
-            applyPresetValues(195, 170, 65, false)
+            applyPresetValues(185, 160, 105, false)
         );
 
         elements.saveSensitivityButton.addEventListener("click", () => saveSensitivityConfig(false));
