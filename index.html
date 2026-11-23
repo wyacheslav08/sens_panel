@@ -60,7 +60,10 @@
         button.danger { background: #b91c1c; }
         button.warning { background: #b45309; }
 
-        input[type="text"], input[type="password"] {
+        input[type="text"],
+        input[type="password"],
+        input[type="datetime-local"],
+        input[type="number"] {
             width: 100%;
             min-height: 46px;
             padding: 10px 12px;
@@ -71,7 +74,10 @@
             color: var(--text);
         }
 
-        input[type="text"]:focus, input[type="password"]:focus {
+        input[type="text"]:focus,
+        input[type="password"]:focus,
+        input[type="datetime-local"]:focus,
+        input[type="number"]:focus {
             border-color: var(--primary);
             box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
         }
@@ -208,6 +214,69 @@
 
         .security-item strong { display: block; margin-top: 4px; }
 
+        .duration-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(125px, 1fr));
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .duration-item {
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: #0f172a;
+        }
+
+        .duration-item span {
+            display: block;
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .duration-item input[type="number"] {
+            min-height: 38px;
+            padding: 6px 10px;
+            background: #111827;
+        }
+
+        .countdown-box {
+            margin: 14px 0;
+            padding: 16px;
+            border: 1px solid rgba(239, 68, 68, 0.55);
+            border-left: 5px solid var(--danger);
+            border-radius: 12px;
+            background: rgba(127, 29, 29, 0.22);
+            text-align: center;
+        }
+
+        .countdown-box.open-window {
+            border-color: rgba(34, 197, 94, 0.55);
+            border-left-color: var(--success);
+            background: rgba(20, 83, 45, 0.22);
+        }
+
+        .countdown-title {
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #fecaca;
+        }
+
+        .countdown-box.open-window .countdown-title {
+            color: #bbf7d0;
+        }
+
+        .countdown-value {
+            margin: 8px 0;
+            font-size: clamp(20px, 4.8vw, 32px);
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+            color: #ffffff;
+        }
+
         .gesture-builder {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
@@ -315,6 +384,14 @@
             animation: progress 1.2s infinite ease-in-out;
         }
 
+        code {
+            padding: 2px 6px;
+            border-radius: 5px;
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid var(--border);
+            color: var(--primary);
+        }
+
         @keyframes pulse { 0%, 100% { opacity: 0.42; } 50% { opacity: 1; } }
         @keyframes progress { 0% { transform: translateX(-110%); } 100% { transform: translateX(310%); } }
 
@@ -383,6 +460,155 @@
             <button id="unlockButton" class="success" data-requires-ready disabled style="width: 100%">
                 🔓 Открыть дверь
             </button>
+        </section>
+
+        <!-- Секция «Капсула времени» (отображается только если активен макрос APP_ENABLE_TIME_CAPSULE) -->
+        <section id="timeCapsuleCard" class="card">
+            <h2>⏳ Капсула времени (Таймер блокировки)</h2>
+            <p class="muted">
+                Блокирует возможность активации замка (соленоида) до достижения установленного времени
+                (минуты, часы, сутки, недели, месяцы, годы). В режиме блокировки устройство переходит в
+                глубокий энергосберегающий сон, а при касании к сенсору включает веб-интерфейс на 10 минут
+                для наблюдения за оставшимся временем.
+            </p>
+
+            <div class="security-details" style="margin-bottom: 14px">
+                <div class="security-item">
+                    <span class="muted">Статус капсулы</span>
+                    <strong id="tcPhaseBadge">Не активна</strong>
+                </div>
+                <div class="security-item">
+                    <span class="muted">Режим питания</span>
+                    <strong id="tcSleepModeValue">Штатный режим</strong>
+                </div>
+                <div class="security-item">
+                    <span class="muted">Окно Web UI (10 мин)</span>
+                    <strong id="tcWebWindowValue">Постоянно</strong>
+                </div>
+                <div class="security-item">
+                    <span class="muted">Циклов блокировки</span>
+                    <strong id="tcCycleCountValue">0</strong>
+                </div>
+            </div>
+
+            <div id="tcActiveCountdownBox" class="countdown-box hidden">
+                <div id="tcCountdownTitle" class="countdown-title">
+                    🔒 ДО СНЯТИЯ БЛОКИРОВКИ КАПСУЛЫ ВРЕМЕНИ ОСТАЛОСЬ:
+                </div>
+                <div id="tcCountdownTimer" class="countdown-value">
+                    0д 00:00:00
+                </div>
+                <div id="tcScheduleSummary" class="muted" style="font-size: 14px"></div>
+                <div style="margin-top: 10px; font-size: 13px; color: #fca5a5">
+                    ⚠️ Разблокировать замок жестами, по Bluetooth или кнопкой сброса НЕВОЗМОЖНО до истечения таймера.
+                    Досрочный сброс возможен только командой <code>capsule reset</code> через монитор порта UART или переустановкой прошивки.
+                </div>
+                <div class="button-row" style="margin-top: 12px">
+                    <button id="refreshTimeCapsuleButton" type="button" class="secondary" data-requires-ready disabled>
+                        🔄 Синхронизировать остаток времени с устройством
+                    </button>
+                </div>
+            </div>
+
+            <div id="tcConfigControls">
+                <div class="grid">
+                    <div class="field">
+                        <label for="tcStartDateInput">Дата и время начала блокировки</label>
+                        <input id="tcStartDateInput" type="datetime-local">
+                    </div>
+                    <div class="field">
+                        <label for="tcEndDateInput">Дата и время окончания блокировки</label>
+                        <input id="tcEndDateInput" type="datetime-local">
+                    </div>
+                </div>
+
+                <div class="field" style="margin-top: 14px">
+                    <div class="volume-header">
+                        <label style="margin: 0">
+                            Или задайте период блокировки (автоматически рассчитает дату окончания):
+                        </label>
+                        <span id="tcCalculatedDurationBadge" class="volume-badge">1 ч 0 мин</span>
+                    </div>
+                    <div class="duration-grid">
+                        <div class="duration-item">
+                            <span>Годы</span>
+                            <input id="tcDurYears" type="number" min="0" max="50" value="0">
+                        </div>
+                        <div class="duration-item">
+                            <span>Месяцы</span>
+                            <input id="tcDurMonths" type="number" min="0" max="120" value="0">
+                        </div>
+                        <div class="duration-item">
+                            <span>Недели</span>
+                            <input id="tcDurWeeks" type="number" min="0" max="260" value="0">
+                        </div>
+                        <div class="duration-item">
+                            <span>Сутки</span>
+                            <input id="tcDurDays" type="number" min="0" max="3650" value="0">
+                        </div>
+                        <div class="duration-item">
+                            <span>Часы</span>
+                            <input id="tcDurHours" type="number" min="0" max="1000" value="1">
+                        </div>
+                        <div class="duration-item">
+                            <span>Минуты</span>
+                            <input id="tcDurMinutes" type="number" min="0" max="10000" value="0">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="field" style="margin-top: 14px">
+                    <label class="checkbox-label" for="tcAutoRelockCheckbox">
+                        <input id="tcAutoRelockCheckbox" type="checkbox">
+                        <span>Продолжить блокировку через выбранное время после окончания</span>
+                    </label>
+                </div>
+
+                <div id="tcAutoRelockPanel" class="field hidden" style="padding: 14px; border: 1px solid var(--border); border-radius: 12px; background: #0f172a">
+                    <div class="volume-header">
+                        <label style="margin: 0; color: var(--primary)">
+                            Период активации новой блокировки после окончания установленной:
+                        </label>
+                        <span id="tcOpenWindowBadge" class="volume-badge">1 ч 0 мин</span>
+                    </div>
+                    <div class="duration-grid">
+                        <div class="duration-item">
+                            <span>Годы</span>
+                            <input id="tcWinYears" type="number" min="0" max="10" value="0">
+                        </div>
+                        <div class="duration-item">
+                            <span>Месяцы</span>
+                            <input id="tcWinMonths" type="number" min="0" max="60" value="0">
+                        </div>
+                        <div class="duration-item">
+                            <span>Недели</span>
+                            <input id="tcWinWeeks" type="number" min="0" max="100" value="0">
+                        </div>
+                        <div class="duration-item">
+                            <span>Сутки</span>
+                            <input id="tcWinDays" type="number" min="0" max="365" value="0">
+                        </div>
+                        <div class="duration-item">
+                            <span>Часы</span>
+                            <input id="tcWinHours" type="number" min="0" max="500" value="1">
+                        </div>
+                        <div class="duration-item">
+                            <span>Минуты</span>
+                            <input id="tcWinMinutes" type="number" min="0" max="10000" value="0">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="notice warning">
+                    После нажатия кнопки активации система запросит <strong>3 предупреждения</strong> и
+                    <strong>финальное подтверждение</strong>, после чего разблокировать замок до истечения
+                    срока будет невозможно.
+                </div>
+
+                <button id="activateTimeCapsuleButton" class="danger" data-requires-ready disabled style="width: 100%; margin-top: 14px; font-weight: 700">
+                    🔒 Активировать блокировку «Капсула времени»
+                </button>
+            </div>
         </section>
 
         <section class="card">
@@ -655,6 +881,14 @@
     <script>
         "use strict";
 
+        /* ------------------------------------------------------------------ */
+        /* Макрос-флаг активации функции «Капсула времени» в веб-интерфейсе    */
+        /* (по умолчанию активно = true; также синхронизируется с прошивкой    */
+        /* по макросу APP_ENABLE_TIME_CAPSULE при подключении по BLE).         */
+        /* Если функция НЕ активна, блок настроек не выводится.                */
+        /* ------------------------------------------------------------------ */
+        const APP_ENABLE_TIME_CAPSULE_UI = true;
+
         const UUID = Object.freeze({
             service:           "5c9a0001-5259-4b6e-8217-10f848c4ab7e",
             unlock:            "5c9a0002-5259-4b6e-8217-10f848c4ab7e",
@@ -664,7 +898,8 @@
             deviceName:        "5c9a0006-5259-4b6e-8217-10f848c4ab7e",
             passkey:           "5c9a0007-5259-4b6e-8217-10f848c4ab7e",
             soundConfig:       "5c9a0008-5259-4b6e-8217-10f848c4ab7e",
-            sensitivityConfig: "5c9a0009-5259-4b6e-8217-10f848c4ab7e"
+            sensitivityConfig: "5c9a0009-5259-4b6e-8217-10f848c4ab7e",
+            timeCapsule:       "5c9a000a-5259-4b6e-8217-10f848c4ab7e"
         });
 
         const ConnectionState = Object.freeze({
@@ -712,6 +947,14 @@
             ERROR: 7
         });
 
+        const TimeCapsulePhase = Object.freeze({
+            INACTIVE: 0,
+            PENDING_START: 1,
+            LOCKED: 2,
+            OPEN_WINDOW: 3
+        });
+
+        const TIME_CAPSULE_CONFIRM_MAGIC = 0xCA;
         const STATUS_SIZE = 24;
         const MAX_GESTURES = 32;
         const MAX_RECONNECT_ATTEMPTS = 5;
@@ -729,13 +972,30 @@
                 deviceName: null,
                 passkey: null,
                 soundConfig: null,
-                sensitivityConfig: null
+                sensitivityConfig: null,
+                timeCapsule: null
             },
             gestures: [],
             factoryResetToken: null,
             reconnectAttempt: 0,
             reconnectCancelled: false,
             manualDisconnect: false
+        };
+
+        const tcState = {
+            featureEnabled: APP_ENABLE_TIME_CAPSULE_UI,
+            phase: TimeCapsulePhase.INACTIVE,
+            autoRelock: false,
+            sleepMode: false,
+            webWindowActive: false,
+            remainingSec: 0,
+            lockDurationSec: 0,
+            openWindowSec: 0,
+            startEpochSec: 0,
+            endEpochSec: 0,
+            webWindowRemSec: 0,
+            cycleCount: 0,
+            syncTickCounter: 0
         };
 
         const elements = {
@@ -753,6 +1013,37 @@
             connectButton: document.getElementById("connectButton"),
             disconnectButton: document.getElementById("disconnectButton"),
             unlockButton: document.getElementById("unlockButton"),
+
+            tcCard: document.getElementById("timeCapsuleCard"),
+            tcPhaseBadge: document.getElementById("tcPhaseBadge"),
+            tcSleepModeValue: document.getElementById("tcSleepModeValue"),
+            tcWebWindowValue: document.getElementById("tcWebWindowValue"),
+            tcCycleCountValue: document.getElementById("tcCycleCountValue"),
+            tcActiveCountdownBox: document.getElementById("tcActiveCountdownBox"),
+            tcCountdownTitle: document.getElementById("tcCountdownTitle"),
+            tcCountdownTimer: document.getElementById("tcCountdownTimer"),
+            tcScheduleSummary: document.getElementById("tcScheduleSummary"),
+            tcConfigControls: document.getElementById("tcConfigControls"),
+            tcStartDateInput: document.getElementById("tcStartDateInput"),
+            tcEndDateInput: document.getElementById("tcEndDateInput"),
+            tcCalculatedDurationBadge: document.getElementById("tcCalculatedDurationBadge"),
+            tcDurYears: document.getElementById("tcDurYears"),
+            tcDurMonths: document.getElementById("tcDurMonths"),
+            tcDurWeeks: document.getElementById("tcDurWeeks"),
+            tcDurDays: document.getElementById("tcDurDays"),
+            tcDurHours: document.getElementById("tcDurHours"),
+            tcDurMinutes: document.getElementById("tcDurMinutes"),
+            tcAutoRelockCheckbox: document.getElementById("tcAutoRelockCheckbox"),
+            tcAutoRelockPanel: document.getElementById("tcAutoRelockPanel"),
+            tcOpenWindowBadge: document.getElementById("tcOpenWindowBadge"),
+            tcWinYears: document.getElementById("tcWinYears"),
+            tcWinMonths: document.getElementById("tcWinMonths"),
+            tcWinWeeks: document.getElementById("tcWinWeeks"),
+            tcWinDays: document.getElementById("tcWinDays"),
+            tcWinHours: document.getElementById("tcWinHours"),
+            tcWinMinutes: document.getElementById("tcWinMinutes"),
+            activateTimeCapsuleButton: document.getElementById("activateTimeCapsuleButton"),
+            refreshTimeCapsuleButton: document.getElementById("refreshTimeCapsuleButton"),
 
             sensModeStatusValue: document.getElementById("sensModeStatusValue"),
             sensLiveTouchValue: document.getElementById("sensLiveTouchValue"),
@@ -827,6 +1118,7 @@
                 control.disabled = !enabled;
             });
             elements.disconnectButton.disabled = state.connection === ConnectionState.DISCONNECTED;
+            renderTimeCapsuleView();
         }
 
         function updateSoundControlsView() {
@@ -869,14 +1161,6 @@
                 );
             }
             elements.sensAutocalCheckbox.checked = false;
-            updateSensitivityBadges();
-        }
-
-        function applyPresetValues(touch, release, swing, autocal) {
-            elements.touchThreshRange.value = String(touch);
-            elements.releaseThreshRange.value = String(release);
-            elements.swingThreshRange.value = String(swing);
-            elements.sensAutocalCheckbox.checked = autocal;
             updateSensitivityBadges();
         }
 
@@ -965,6 +1249,316 @@
                 await saveSensitivityConfig(false);
             } else {
                 showToast(`Выбран профиль: ${touch}/${release} fF, свайп ${swing} fF`);
+            }
+        }
+
+        /* ------------------------------------------------------------------ */
+        /* Управление системой «Капсула времени»                              */
+        /* ------------------------------------------------------------------ */
+
+        function toLocalDatetimeValue(date) {
+            const pad = (n) => String(n).padStart(2, "0");
+            return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+        }
+
+        function formatHumanBreakdown(totalSeconds) {
+            let s = Math.max(0, Math.floor(totalSeconds));
+            const years = Math.floor(s / 31536000);
+            s %= 31536000;
+            const months = Math.floor(s / 2592000);
+            s %= 2592000;
+            const weeks = Math.floor(s / 604800);
+            s %= 604800;
+            const days = Math.floor(s / 86400);
+            s %= 86400;
+            const hours = Math.floor(s / 3600);
+            s %= 3600;
+            const minutes = Math.floor(s / 60);
+            const seconds = s % 60;
+            const pad = (n) => String(n).padStart(2, "0");
+
+            const parts = [];
+            if (years > 0) parts.push(`${years}г`);
+            if (months > 0 || years > 0) parts.push(`${months}мес`);
+            if (weeks > 0 || months > 0 || years > 0) parts.push(`${weeks}нед`);
+            parts.push(`${days}д`);
+            parts.push(`${pad(hours)}:${pad(minutes)}:${pad(seconds)}`);
+            return parts.join(" ");
+        }
+
+        function calculateOpenWindowSecondsFromInputs() {
+            const years = Math.max(0, Number(elements.tcWinYears.value) || 0);
+            const months = Math.max(0, Number(elements.tcWinMonths.value) || 0);
+            const weeks = Math.max(0, Number(elements.tcWinWeeks.value) || 0);
+            const days = Math.max(0, Number(elements.tcWinDays.value) || 0);
+            const hours = Math.max(0, Number(elements.tcWinHours.value) || 0);
+            const minutes = Math.max(0, Number(elements.tcWinMinutes.value) || 0);
+
+            return (years * 31536000) +
+                   (months * 2592000) +
+                   ((weeks * 7 + days) * 86400) +
+                   (hours * 3600) +
+                   (minutes * 60);
+        }
+
+        function updateTimeCapsulePreviewBadges() {
+            const nowMs = Date.now();
+            const startMs = Date.parse(elements.tcStartDateInput.value) || nowMs;
+            const endMs = Date.parse(elements.tcEndDateInput.value) || nowMs;
+            const effectiveStartMs = Math.max(nowMs, startMs);
+            const lockSec = Math.max(0, Math.floor((endMs - effectiveStartMs) / 1000));
+
+            elements.tcCalculatedDurationBadge.textContent =
+                lockSec >= 60 ? formatHumanBreakdown(lockSec) : "Менее 1 мин";
+
+            const winSec = calculateOpenWindowSecondsFromInputs();
+            elements.tcOpenWindowBadge.textContent =
+                winSec >= 60 ? formatHumanBreakdown(winSec) : "Менее 1 мин";
+        }
+
+        function syncEndDateFromDurationInputs() {
+            const startMs = Date.parse(elements.tcStartDateInput.value) || Date.now();
+            const years = Math.max(0, Number(elements.tcDurYears.value) || 0);
+            const months = Math.max(0, Number(elements.tcDurMonths.value) || 0);
+            const weeks = Math.max(0, Number(elements.tcDurWeeks.value) || 0);
+            const days = Math.max(0, Number(elements.tcDurDays.value) || 0);
+            const hours = Math.max(0, Number(elements.tcDurHours.value) || 0);
+            const minutes = Math.max(0, Number(elements.tcDurMinutes.value) || 0);
+
+            const target = new Date(startMs);
+            target.setFullYear(target.getFullYear() + years);
+            target.setMonth(target.getMonth() + months);
+            const extraSec = ((weeks * 7 + days) * 86400) + (hours * 3600) + (minutes * 60);
+            const finalDate = new Date(target.getTime() + extraSec * 1000);
+            elements.tcEndDateInput.value = toLocalDatetimeValue(finalDate);
+            updateTimeCapsulePreviewBadges();
+        }
+
+        function initTimeCapsuleInputs() {
+            if (!elements.tcCard) return;
+            elements.tcCard.classList.toggle("hidden", !tcState.featureEnabled);
+            const now = new Date();
+            elements.tcStartDateInput.value = toLocalDatetimeValue(now);
+            syncEndDateFromDurationInputs();
+        }
+
+        function renderTimeCapsuleView() {
+            if (!elements.tcCard) return;
+
+            /* Если макрос APP_ENABLE_TIME_CAPSULE отключён (0), визуализацию не выводим */
+            const visible = Boolean(APP_ENABLE_TIME_CAPSULE_UI && tcState.featureEnabled);
+            elements.tcCard.classList.toggle("hidden", !visible);
+            if (!visible) return;
+
+            const phaseLabels = {
+                [TimeCapsulePhase.INACTIVE]: "Не активна",
+                [TimeCapsulePhase.PENDING_START]: "⏳ Ожидание даты начала",
+                [TimeCapsulePhase.LOCKED]: "🔒 ЗАБЛОКИРОВАНО",
+                [TimeCapsulePhase.OPEN_WINDOW]: "🔓 Окно перед новой блокировкой"
+            };
+
+            elements.tcPhaseBadge.textContent = phaseLabels[tcState.phase] || "Неизвестно";
+
+            if (tcState.phase === TimeCapsulePhase.LOCKED) {
+                elements.tcSleepModeValue.textContent =
+                    tcState.webWindowRemSec > 0
+                        ? "Пробуждение Web UI (10 мин)"
+                        : "Глубокий сон (BLE Выкл)";
+                elements.tcWebWindowValue.textContent =
+                    tcState.webWindowRemSec > 0
+                        ? `${Math.floor(tcState.webWindowRemSec / 60)} мин ${tcState.webWindowRemSec % 60} с`
+                        : "Сон (коснитесь сенсора)";
+            } else {
+                elements.tcSleepModeValue.textContent = "Штатный режим";
+                elements.tcWebWindowValue.textContent = "Постоянно активно";
+            }
+
+            elements.tcCycleCountValue.textContent = String(tcState.cycleCount);
+
+            const isProtected =
+                tcState.phase === TimeCapsulePhase.PENDING_START ||
+                tcState.phase === TimeCapsulePhase.LOCKED;
+
+            elements.tcActiveCountdownBox.classList.toggle(
+                "hidden",
+                tcState.phase === TimeCapsulePhase.INACTIVE
+            );
+            elements.tcActiveCountdownBox.classList.toggle(
+                "open-window",
+                tcState.phase === TimeCapsulePhase.OPEN_WINDOW
+            );
+            elements.tcConfigControls.classList.toggle("hidden", isProtected);
+
+            const isReady = state.connection === ConnectionState.READY;
+
+            if (tcState.phase === TimeCapsulePhase.LOCKED) {
+                elements.unlockButton.disabled = true;
+                elements.unlockButton.textContent = "🔒 Заблокировано Капсулой Времени";
+            } else {
+                elements.unlockButton.disabled = !isReady;
+                elements.unlockButton.textContent = "🔓 Открыть дверь";
+            }
+
+            if (isProtected) {
+                elements.factoryResetButton.disabled = true;
+                elements.deleteBondsButton.disabled = true;
+                elements.saveGestureButton.disabled = true;
+                elements.savePasskeyButton.disabled = true;
+            }
+
+            if (tcState.phase !== TimeCapsulePhase.INACTIVE) {
+                if (tcState.phase === TimeCapsulePhase.PENDING_START) {
+                    elements.tcCountdownTitle.textContent = "⏳ ДО ВКЛЮЧЕНИЯ БЛОКИРОВКИ ОСТАЛОСЬ:";
+                } else if (tcState.phase === TimeCapsulePhase.LOCKED) {
+                    elements.tcCountdownTitle.textContent = "🔒 ДО СНЯТИЯ БЛОКИРОВКИ КАПСУЛЫ ВРЕМЕНИ ОСТАЛОСЬ:";
+                } else {
+                    elements.tcCountdownTitle.textContent = "🔓 ОКНО РАЗБЛОКИРОВКИ (ДО НОВОЙ БЛОКИРОВКИ):";
+                }
+
+                elements.tcCountdownTimer.textContent = formatHumanBreakdown(tcState.remainingSec);
+
+                const startStr = tcState.startEpochSec > 0
+                    ? new Date(tcState.startEpochSec * 1000).toLocaleString("ru-RU")
+                    : "Сразу при активации";
+                const endStr = tcState.endEpochSec > 0
+                    ? new Date(tcState.endEpochSec * 1000).toLocaleString("ru-RU")
+                    : formatHumanBreakdown(tcState.lockDurationSec);
+                const relockStr = tcState.autoRelock
+                    ? ` · Повторная блокировка через ${formatHumanBreakdown(tcState.openWindowSec)} после окончания`
+                    : " · Без повторной блокировки";
+
+                elements.tcScheduleSummary.textContent =
+                    `Начало: ${startStr} · Окончание: ${endStr}${relockStr}`;
+            }
+        }
+
+        async function readTimeCapsuleFromDevice() {
+            if (!state.characteristics.timeCapsule) {
+                renderTimeCapsuleView();
+                return;
+            }
+            try {
+                const data = await state.characteristics.timeCapsule.readValue();
+                if (data.byteLength >= 28) {
+                    tcState.featureEnabled = data.getUint8(0) !== 0;
+                    tcState.phase = data.getUint8(1);
+                    const flags = data.getUint8(2);
+                    tcState.autoRelock = Boolean(flags & 0x01);
+                    tcState.sleepMode = Boolean(flags & 0x02);
+                    tcState.webWindowActive = Boolean(flags & 0x04);
+                    tcState.remainingSec = data.getUint32(4, true);
+                    tcState.lockDurationSec = data.getUint32(8, true);
+                    tcState.openWindowSec = data.getUint32(12, true);
+                    tcState.startEpochSec = data.getUint32(16, true);
+                    tcState.endEpochSec = data.getUint32(20, true);
+                    tcState.webWindowRemSec = data.getUint16(24, true);
+                    tcState.cycleCount = data.getUint16(26, true);
+                    renderTimeCapsuleView();
+                }
+            } catch (err) {
+                console.warn("Time Capsule read skipped:", err);
+            }
+        }
+
+        async function activateTimeCapsule() {
+            if (!state.characteristics.timeCapsule) {
+                showToast("Характеристика «Капсула времени» недоступна (проверьте прошивку)");
+                return;
+            }
+
+            const nowMs = Date.now();
+            const startMs = Date.parse(elements.tcStartDateInput.value) || nowMs;
+            const endMs = Date.parse(elements.tcEndDateInput.value) || 0;
+
+            const effectiveStartMs = Math.max(nowMs, startMs);
+            const startDelaySec = startMs > nowMs + 15000
+                ? Math.floor((startMs - nowMs) / 1000)
+                : 0;
+            const lockDurationSec = Math.floor((endMs - effectiveStartMs) / 1000);
+
+            if (lockDurationSec < 60) {
+                showToast("Длительность блокировки должна составлять не менее 1 минуты!");
+                return;
+            }
+
+            const autoRelock = elements.tcAutoRelockCheckbox.checked;
+            let openWindowSec = 0;
+            if (autoRelock) {
+                openWindowSec = calculateOpenWindowSecondsFromInputs();
+                if (openWindowSec < 60) {
+                    showToast("Период до новой блокировки после окончания должен быть не менее 1 минуты!");
+                    return;
+                }
+            }
+
+            const startLabel = new Date(effectiveStartMs).toLocaleString("ru-RU");
+            const endLabel = new Date(endMs).toLocaleString("ru-RU");
+            const durLabel = formatHumanBreakdown(lockDurationSec);
+            const relockLabel = autoRelock
+                ? `\nАвтоповтор блокировки: ДА (через ${formatHumanBreakdown(openWindowSec)} после окончания).`
+                : "\nАвтоповтор блокировки: НЕТ.";
+
+            /* Предупреждение 1 из 3 */
+            if (!confirm(
+                `⚠️ ПРЕДУПРЕЖДЕНИЕ 1 из 3:\n\n` +
+                `Вы активируете «Капсулу времени» на срок:\n` +
+                `${durLabel}\n` +
+                `(начало: ${startLabel}, окончание: ${endLabel}).${relockLabel}\n\n` +
+                `Разблокировать устройство жестами, через веб-интерфейс или кнопкой сброса будет НЕВОЗМОЖНО до истечения времени!\n\n` +
+                `Подтверждаете намерение заблокировать замок?`
+            )) {
+                return;
+            }
+
+            /* Предупреждение 2 из 3 */
+            if (!confirm(
+                `⚠️ ПРЕДУПРЕЖДЕНИЕ 2 из 3:\n\n` +
+                `Во время блокировки соленоид замка полностью блокируется, сенсоры не принимают пароли, а система переходит в режим глубокого сна.\n` +
+                `Отключение и повторное включение питания НЕ сбрасывает таймер блокировки!\n\n` +
+                `Вы точно понимаете, что открыть замок до ${endLabel} будет НЕВОЗМОЖНО?`
+            )) {
+                return;
+            }
+
+            /* Предупреждение 3 из 3 */
+            if (!confirm(
+                `⚠️ ПРЕДУПРЕЖДЕНИЕ 3 из 3:\n\n` +
+                `При касании к сенсору устройство будет включать веб-интерфейс только на 10 минут исключительно для наблюдения за таймером.\n` +
+                `Досрочно сбросить таймер можно ТОЛЬКО послав команду 'capsule reset' через монитор порта UART или переустановив прошивку.\n\n` +
+                `Перейти к финальному подтверждению активации?`
+            )) {
+                return;
+            }
+
+            /* Финальное 4-е подтверждение */
+            if (!confirm(
+                `🔒 ФИНАЛЬНОЕ ПОДТВЕРЖДЕНИЕ:\n\n` +
+                `Заблокировать устройство прямо сейчас до ${endLabel} (${durLabel})?`
+            )) {
+                return;
+            }
+
+            const payload = new Uint8Array(24);
+            const view = new DataView(payload.buffer);
+            view.setUint8(0, TIME_CAPSULE_CONFIRM_MAGIC);
+            view.setUint8(1, autoRelock ? 0x01 : 0x00);
+            view.setUint16(2, 0, true);
+            view.setUint32(4, startDelaySec, true);
+            view.setUint32(8, lockDurationSec, true);
+            view.setUint32(12, openWindowSec, true);
+            view.setUint32(16, Math.floor(effectiveStartMs / 1000), true);
+            view.setUint32(20, Math.floor(endMs / 1000), true);
+
+            try {
+                await writeCharacteristic(state.characteristics.timeCapsule, payload);
+                await delay(300);
+                await readTimeCapsuleFromDevice();
+                showToast(
+                    "🔒 Капсула времени активирована! Через 15 секунд система отключит радиомодуль и перейдёт в глубокий сон.",
+                    8000
+                );
+            } catch (error) {
+                showToast(friendlyBluetoothError(error), 6000);
             }
         }
 
@@ -1132,6 +1726,12 @@
             } catch (_) {
                 state.characteristics.sensitivityConfig = null;
             }
+            try {
+                state.characteristics.timeCapsule =
+                    await state.service.getCharacteristic(UUID.timeCapsule);
+            } catch (_) {
+                state.characteristics.timeCapsule = null;
+            }
         }
 
         async function readStatusWithPairingRetry() {
@@ -1182,6 +1782,7 @@
             }
 
             await readSensitivityConfigFromDevice();
+            await readTimeCapsuleFromDevice();
         }
 
         async function waitUntilReady() {
@@ -1345,6 +1946,22 @@
             clearCharacteristics();
             setReadyControls(false);
 
+            /*
+             * Если активна блокировка «Капсулы времени» и окно Web UI закрылось,
+             * устройство ушло в энергосберегающий сон и выключило рекламу BLE.
+             */
+            if (tcState.phase === TimeCapsulePhase.LOCKED) {
+                tcState.sleepMode = true;
+                tcState.webWindowRemSec = 0;
+                renderTimeCapsuleView();
+                setConnectionState(
+                    ConnectionState.DISCONNECTED,
+                    "Капсула времени в глубоком сне. Коснитесь сенсора для включения Web UI на 10 мин."
+                );
+                showToast("Устройство перешло в режим глубокого сна. Коснитесь сенсора для пробуждения Web UI.", 6000);
+                return;
+            }
+
             if (state.manualDisconnect || state.reconnectCancelled) {
                 setConnectionState(ConnectionState.DISCONNECTED);
                 return;
@@ -1384,6 +2001,10 @@
         }
 
         async function unlockDoor() {
+            if (tcState.phase === TimeCapsulePhase.LOCKED) {
+                showToast("🔒 Открытие заблокировано «Капсулой времени» до истечения таймера!");
+                return;
+            }
             elements.unlockButton.disabled = true;
             try {
                 await writeCharacteristic(state.characteristics.unlock, Uint8Array.of(0x01));
@@ -1391,7 +2012,7 @@
             } catch (error) {
                 showToast(friendlyBluetoothError(error), 6000);
             } finally {
-                elements.unlockButton.disabled = state.connection !== ConnectionState.READY;
+                renderTimeCapsuleView();
             }
         }
 
@@ -1510,6 +2131,10 @@
         }
 
         async function requestFactoryReset() {
+            if (tcState.phase === TimeCapsulePhase.LOCKED || tcState.phase === TimeCapsulePhase.PENDING_START) {
+                showToast("Заводской сброс заблокирован активной «Капсулой времени»!");
+                return;
+            }
             if (!confirm("Будут удалены пароль, PIN, имя и все связи. Продолжить?")) return;
             state.factoryResetToken = null;
 
@@ -1574,9 +2199,58 @@
             return new Promise((resolve) => setTimeout(resolve, milliseconds));
         }
 
+        /* ------------------------------------------------------------------ */
+        /* Регистрация обработчиков событий UI                                */
+        /* ------------------------------------------------------------------ */
+
         elements.connectButton.addEventListener("click", connectBluetooth);
         elements.disconnectButton.addEventListener("click", disconnectBluetooth);
         elements.unlockButton.addEventListener("click", unlockDoor);
+
+        [
+            elements.tcStartDateInput,
+            elements.tcDurYears,
+            elements.tcDurMonths,
+            elements.tcDurWeeks,
+            elements.tcDurDays,
+            elements.tcDurHours,
+            elements.tcDurMinutes
+        ].forEach((el) => {
+            if (el) el.addEventListener("input", syncEndDateFromDurationInputs);
+        });
+
+        if (elements.tcEndDateInput) {
+            elements.tcEndDateInput.addEventListener("input", updateTimeCapsulePreviewBadges);
+        }
+
+        [
+            elements.tcWinYears,
+            elements.tcWinMonths,
+            elements.tcWinWeeks,
+            elements.tcWinDays,
+            elements.tcWinHours,
+            elements.tcWinMinutes
+        ].forEach((el) => {
+            if (el) el.addEventListener("input", updateTimeCapsulePreviewBadges);
+        });
+
+        if (elements.tcAutoRelockCheckbox) {
+            elements.tcAutoRelockCheckbox.addEventListener("change", () => {
+                elements.tcAutoRelockPanel.classList.toggle(
+                    "hidden",
+                    !elements.tcAutoRelockCheckbox.checked
+                );
+                updateTimeCapsulePreviewBadges();
+            });
+        }
+
+        if (elements.activateTimeCapsuleButton) {
+            elements.activateTimeCapsuleButton.addEventListener("click", activateTimeCapsule);
+        }
+
+        if (elements.refreshTimeCapsuleButton) {
+            elements.refreshTimeCapsuleButton.addEventListener("click", readTimeCapsuleFromDevice);
+        }
 
         document.querySelectorAll(".gesture-button").forEach((button) => {
             button.addEventListener("click", () => appendGesture(Number(button.dataset.gesture)));
@@ -1603,7 +2277,7 @@
             );
             updateSensitivityBadges();
         });
-        
+
         elements.releaseThreshRange.addEventListener("input", () => {
             elements.sensAutocalCheckbox.checked = false;
             updateSensitivityBadges();
@@ -1623,7 +2297,7 @@
             adjustRangeWithAutoRelease(elements.releaseThreshRange, 5, 35, 210, false)
         );
         document.getElementById("swingDownButton").addEventListener("click", () => {
-            const next = Math.max(50, Number(elements.swingThreshRange.value) - 5);
+            const next = Math.max(45, Number(elements.swingThreshRange.value) - 5);
             elements.swingThreshRange.value = String(next);
             updateSensitivityBadges();
         });
@@ -1677,7 +2351,7 @@
         document.getElementById("resetCalibrationButton").addEventListener("click", async () => {
             await executeAdmin(
                 AdminCommand.CALIBRATION_RESET,
-                "Сбросить калибровку сенсора к базовым параметрам (95/70/75 fF)?",
+                "Сбросить калибровку сенсора к базовым параметрам?",
                 "Калибровка сброшена к базовым настройкам"
             );
             await delay(400);
@@ -1703,6 +2377,27 @@
 
         elements.factoryResetButton.addEventListener("click", requestFactoryReset);
 
+        /* Секундный тик живого обратного отсчёта и периодическая сверка с ESP32 */
+        setInterval(() => {
+            if (tcState.phase !== TimeCapsulePhase.INACTIVE) {
+                if (tcState.remainingSec > 0) {
+                    tcState.remainingSec -= 1;
+                }
+                if (tcState.webWindowRemSec > 0) {
+                    tcState.webWindowRemSec -= 1;
+                }
+                renderTimeCapsuleView();
+
+                if (state.connection === ConnectionState.READY && state.characteristics.timeCapsule) {
+                    tcState.syncTickCounter += 1;
+                    if (tcState.syncTickCounter >= 10 || tcState.remainingSec === 0) {
+                        tcState.syncTickCounter = 0;
+                        readTimeCapsuleFromDevice();
+                    }
+                }
+            }
+        }, 1000);
+
         window.addEventListener("beforeunload", () => {
             state.reconnectCancelled = true;
             if (state.device && state.device.gatt.connected) {
@@ -1710,9 +2405,11 @@
             }
         });
 
+        initTimeCapsuleInputs();
         renderGestureSequence();
         updateSoundControlsView();
         updateSensitivityBadges();
+        renderTimeCapsuleView();
         setConnectionState(ConnectionState.DISCONNECTED);
     </script>
 </body>
